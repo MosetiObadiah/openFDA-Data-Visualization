@@ -377,6 +377,7 @@ def display_device_reports():
                     text="Percentage"
                 )
                 fig.update_traces(textposition='outside')
+                fig.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
@@ -395,7 +396,7 @@ def display_device_reports():
 
             # AI Insights for Clearance Types
             st.markdown("### AI Insights")
-            if st.button("Get Insights for Clearance Types"):
+            if st.button("Get Insights for Clearance Types", key="clearance_insights"):
                 insights = get_insights_from_data(df, "510(k) clearance types")
                 st.write(insights)
 
@@ -423,6 +424,7 @@ def display_device_reports():
                     text="Percentage"
                 )
                 fig.update_traces(textposition='outside')
+                fig.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
@@ -441,7 +443,7 @@ def display_device_reports():
 
             # AI Insights for Advisory Committees
             st.markdown("### AI Insights")
-            if st.button("Get Insights for Advisory Committees"):
+            if st.button("Get Insights for Advisory Committees", key="committee_insights"):
                 insights = get_insights_from_data(df, "advisory committees")
                 st.write(insights)
 
@@ -469,6 +471,7 @@ def display_device_reports():
                     text="Percentage"
                 )
                 fig.update_traces(textposition='outside')
+                fig.update_layout(xaxis_tickangle=-45)
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
@@ -487,7 +490,7 @@ def display_device_reports():
 
             # AI Insights for Decision Codes
             st.markdown("### AI Insights")
-            if st.button("Get Insights for Decision Codes"):
+            if st.button("Get Insights for Decision Codes", key="decision_insights"):
                 insights = get_insights_from_data(df, "510(k) decision codes")
                 st.write(insights)
 

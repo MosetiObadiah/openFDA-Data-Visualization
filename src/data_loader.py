@@ -8,11 +8,20 @@ load_dotenv()
 api_key = os.getenv("OPENFDA_API_KEY")
 print(f"API Key loaded: {'Yes' if api_key else 'No'}")  # Debug print for API key
 
-def fetch_api_data(url: str, url_goal: Optional[str] = None) -> dict:
+BASE_URL = "https://api.fda.gov/"
+
+def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
     try:
-        # Construct the full URL with API key
-        full_url = f"{url}{'&' if '?' in url else '?'}api_key={api_key}" if api_key else url
-        print(f"\nFetching data for: {url_goal or 'unknown context'}")
+        # Construct the full URL with base URL and parameters
+        full_url = BASE_URL + endpoint
+        if params:
+            query_string = "&".join(f"{k}={v}" for k, v in params.items())
+            full_url += f"?{query_string}"
+
+        # Add API key if available
+        full_url += f"{'&' if '?' in full_url else '?'}api_key={api_key}" if api_key else ""
+
+        print(f"\nFetching data for: {params or 'unknown context'}")
         print(f"Full URL: {full_url}")
 
         response = requests.get(full_url)
@@ -34,7 +43,7 @@ def fetch_api_data(url: str, url_goal: Optional[str] = None) -> dict:
             return {"results": []}
 
         if "results" not in data:
-            print(f"No results found in API response for {url_goal or 'unknown context'}")
+            print(f"No results found in API response for {params or 'unknown context'}")
             print(f"Response data: {json.dumps(data, indent=2)}")
             return {"results": []}
 

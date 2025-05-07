@@ -3,68 +3,56 @@ import pandas as pd
 import sys
 import os
 
+# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from drug_page import display_drug_reports
-from device_page import display_device_reports
+
+from app.device_page import display_device_reports
+from app.food_page import display_food_reports
+from app.drug_page import display_drug_reports
+from app.tobacco_page import display_tobacco_reports
 
 def display_home_page():
-    st.markdown("# OpenFDA Data Visualization Dashboard")
+    st.title("OpenFDA Data Visualization Dashboard")
+    st.write("""
+    Welcome to the OpenFDA Data Visualization Dashboard. This application provides comprehensive insights into adverse events and recalls across various FDA-regulated products.
 
-    st.markdown("## Overview")
-    st.markdown("Interactive dashboard analyzing adverse events from the [OpenFDA API](https://open.fda.gov/apis/). Features include device analysis, drug events, and trend visualization.")
+    ### Key Features
+    - Interactive visualizations
+    - Real-time data analysis
+    - AI-powered insights
+    - Detailed statistics and trends
 
-    col1, col2 = st.columns(2)
+    ### Dashboard Sections
+    - **Devices**: Analysis of medical device reports and recalls
+    - **Drugs**: Analysis of drug adverse events and safety data
+    - **Food**: Analysis of food recalls and safety events
+    - **Tobacco**: Analysis of tobacco product data and compliance
+    """)
 
-    with col1:
-        st.markdown("### Key Features")
-        st.markdown("""
-        - **Data Analysis**
-          - Device class distribution
-          - Manufacturer analysis
-          - Geographic patterns
-          - Problem trends
+def main():
+    st.set_page_config(
+        page_title="OpenFDA Dashboard",
+        page_icon="🏥",
+        layout="wide"
+    )
 
-        - **AI Integration**
-          - Pattern recognition
-          - Risk assessment
-          - Market insights
-        """)
+    # Create tabs for different sections
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Home", "Devices", "Drugs", "Food", "Tobacco"])
 
-    with col2:
-        st.markdown("### Dashboard Sections")
-        st.markdown("""
-        - **Device Reports**
-          - Class distribution
-          - Problem analysis
-          - Manufacturer insights
-          - Geographic patterns
+    with tab1:
+        display_home_page()
 
-        - **Drug Reports**
-          - Adverse reactions
-          - Monthly trends
-          - Event summaries
-        """)
+    with tab2:
+        display_device_reports()
 
-    st.markdown("---")
+    with tab3:
+        display_drug_reports()
 
-st.set_page_config(
-    page_title="OpenFDA Dashboard",
-    layout="wide"
-)
+    with tab4:
+        display_food_reports()
 
-tabs = st.tabs(["Home", "Drugs", "Devices", "Food", "Tobacco"])
+    with tab5:
+        display_tobacco_reports()
 
-with tabs[0]:
-    display_home_page()
-
-with tabs[1]:
-    display_drug_reports()
-
-with tabs[2]:
-    display_device_reports()
-
-with tabs[3]:
-    st.title("Food Reports")
-
-with tabs[4]:
-    st.title("Tobacco Reports")
+if __name__ == "__main__":
+    main()

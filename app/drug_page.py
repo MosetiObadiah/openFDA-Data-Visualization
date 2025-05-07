@@ -277,14 +277,16 @@ def display_actions_taken_with_drug():
             st.warning("No data available for Actions Taken with Drug.")
             return
 
+        # Display the raw data
         render_data_table(df)
 
+        # Create and display the pie chart
         fig = px.pie(
             df,
             names="Action",
-            values="count",
+            values="Count",
             title="Actions Taken with the Drug",
-            labels={"Action": "Action Taken", "count": "Number of Records"}
+            labels={"Action": "Action Taken", "Count": "Number of Records"}
         )
         st.plotly_chart(fig, use_container_width=True)
 

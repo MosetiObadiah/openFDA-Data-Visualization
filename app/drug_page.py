@@ -18,6 +18,7 @@ from src.drug_events import (
     get_actions_taken_with_drug,
     adverse_events_by_country
 )
+from src.utils import get_state_abbreviations
 from src.components import (
     render_metric_header,
     render_date_picker,
@@ -318,29 +319,58 @@ def display_actions_taken_with_drug():
             st.warning("No data available for Actions Taken with Drug.")
             return
 
-        # Display the raw data
-        render_data_table(df)
+        # Create two columns for the layout
+        col1, col2 = st.columns(2)
 
-        # Create and display the pie chart
-        fig = px.pie(
-            df,
-            names="Action",
-            values="Count",
-            title="Actions Taken with the Drug",
-            labels={"Action": "Action Taken", "Count": "Number of Records"}
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        with col1:
+            # Display the raw data
+            st.markdown("### Data Table")
+            render_data_table(df)
+
+        with col2:
+            # Create and display the pie chart
+            fig = px.pie(
+                df,
+                names="Action",
+                values="Count",
+                title="Actions Taken with the Drug",
+                labels={"Action": "Action Taken", "Count": "Number of Records"},
+                hover_data=["Count"]
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig, use_container_width=True)
 
         # AI Insights with Custom Question
         st.markdown("### Insights")
         if st.button("Get General Insights for Actions Taken"):
-            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug")
+            prompt = f"""
+            Analyze the following data about actions taken with drugs after adverse events:
+            {df.to_string()}
+
+            Focus on:
+            1. Most common actions taken
+            2. Distribution of different actions
+            3. Implications for drug safety
+            4. Potential impact on patient care
+            5. Recommendations for drug monitoring
+
+            Provide a comprehensive analysis in 5-7 sentences.
+            """
+            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug", prompt)
             st.write(insights)
 
         custom_question = st.text_input("Ask a specific question about this data (e.g., 'What is the most common action taken?')", key="actions_taken_insight_question")
         if custom_question:
-            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug", custom_question)
+            prompt = f"""
+            Based on the following data about actions taken with drugs:
+            {df.to_string()}
+
+            Answer this specific question in 5-7 sentences, focusing on data-driven insights and potential implications:
+            {custom_question}
+            """
+            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug", prompt)
             st.write(insights)
+
     except Exception as e:
         st.error(f"Failed to load data for Actions Taken with Drug: {e}")
 

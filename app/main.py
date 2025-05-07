@@ -5,12 +5,13 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from drug_page import display_drug_reports
+from device_page import display_device_reports
 
 def display_home_page():
     st.markdown("# OpenFDA Data Visualization Dashboard")
 
     st.markdown("## Overview")
-    st.markdown("Interactive dashboard analyzing adverse drug events from the [OpenFDA API](https://open.fda.gov/apis/drug/event/). Features include sentiment analysis, demographic insights, and trend visualization.")
+    st.markdown("Interactive dashboard analyzing adverse events from the [OpenFDA API](https://open.fda.gov/apis/). Features include device analysis, drug events, and trend visualization.")
 
     col1, col2 = st.columns(2)
 
@@ -18,32 +19,30 @@ def display_home_page():
         st.markdown("### Key Features")
         st.markdown("""
         - **Data Analysis**
-          - 1,000+ adverse event reports
-          - Patient demographics
-          - Monthly trends
-          - Common reactions
+          - Device class distribution
+          - Manufacturer analysis
+          - Geographic patterns
+          - Problem trends
 
         - **AI Integration**
-          - Sentiment analysis
           - Pattern recognition
-          - Risk scoring
+          - Risk assessment
+          - Market insights
         """)
 
     with col2:
         st.markdown("### Dashboard Sections")
         st.markdown("""
+        - **Device Reports**
+          - Class distribution
+          - Problem analysis
+          - Manufacturer insights
+          - Geographic patterns
+
         - **Drug Reports**
           - Adverse reactions
           - Monthly trends
           - Event summaries
-
-        - **Demographics**
-          - Age/sex distribution
-          - Geographic patterns
-
-        - **Sentiment Analysis**
-          - Reaction sentiment
-          - Risk assessment
         """)
 
     st.markdown("---")
@@ -62,7 +61,7 @@ with tabs[1]:
     display_drug_reports()
 
 with tabs[2]:
-    st.title("Device Reports")
+    display_device_reports()
 
 with tabs[3]:
     st.title("Food Reports")

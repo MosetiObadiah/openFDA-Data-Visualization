@@ -9,92 +9,147 @@ from functools import partial
 @st.cache_data
 def device_class_distribution() -> pd.DataFrame:
     """Fetch and process device class distribution data."""
-    url = "https://api.fda.gov/device/event.json?count=device_class.exact&limit=100"
-    data = fetch_api_data(url, "device class distribution")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data or not data["results"]:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/device/event.json?count=device_class.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "device class distribution")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         return pd.DataFrame(columns=["Device Class", "Count", "Percentage"])
 
-    df = pd.DataFrame(data["results"])
-    if len(df) == 0:
-        return pd.DataFrame(columns=["Device Class", "Count", "Percentage"])
-
+    df = pd.DataFrame(all_results)
     df.columns = ["Device Class", "Count"]
     total = df["Count"].sum()
     df["Percentage"] = (df["Count"] / total * 100).round(2).astype(str) + "%"
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def device_problems_by_year(start_year: int = 2010, end_year: int = 2024) -> pd.DataFrame:
     """Fetch and process device problems over time."""
-    url = f"https://api.fda.gov/device/event.json?search=date_received:[{start_year}0101+TO+{end_year}1231]&count=device_problem.exact&limit=100"
-    data = fetch_api_data(url, "device problems by year")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data or not data["results"]:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/device/event.json?search=date_received:[{start_year}0101+TO+{end_year}1231]&count=device_problem.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "device problems by year")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         return pd.DataFrame(columns=["Problem", "Count", "Percentage"])
 
-    df = pd.DataFrame(data["results"])
-    if len(df) == 0:
-        return pd.DataFrame(columns=["Problem", "Count", "Percentage"])
-
+    df = pd.DataFrame(all_results)
     df.columns = ["Problem", "Count"]
     total = df["Count"].sum()
     df["Percentage"] = (df["Count"] / total * 100).round(2).astype(str) + "%"
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def device_manufacturer_analysis() -> pd.DataFrame:
     """Fetch and process device manufacturer data."""
-    url = "https://api.fda.gov/device/event.json?count=manufacturer_name.exact&limit=100"
-    data = fetch_api_data(url, "device manufacturer analysis")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data or not data["results"]:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/device/event.json?count=manufacturer_name.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "device manufacturer analysis")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         return pd.DataFrame(columns=["Manufacturer", "Count", "Percentage"])
 
-    df = pd.DataFrame(data["results"])
-    if len(df) == 0:
-        return pd.DataFrame(columns=["Manufacturer", "Count", "Percentage"])
-
+    df = pd.DataFrame(all_results)
     df.columns = ["Manufacturer", "Count"]
     total = df["Count"].sum()
     df["Percentage"] = (df["Count"] / total * 100).round(2).astype(str) + "%"
-    return df.head(20)  # Top 20 manufacturers
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def device_event_type_distribution() -> pd.DataFrame:
     """Fetch and process device event type distribution."""
-    url = "https://api.fda.gov/device/event.json?count=event_type.exact&limit=100"
-    data = fetch_api_data(url, "device event type distribution")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data or not data["results"]:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/device/event.json?count=event_type.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "device event type distribution")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         return pd.DataFrame(columns=["Event Type", "Count", "Percentage"])
 
-    df = pd.DataFrame(data["results"])
-    if len(df) == 0:
-        return pd.DataFrame(columns=["Event Type", "Count", "Percentage"])
-
+    df = pd.DataFrame(all_results)
     df.columns = ["Event Type", "Count"]
     total = df["Count"].sum()
     df["Percentage"] = (df["Count"] / total * 100).round(2).astype(str) + "%"
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def device_geographic_distribution() -> pd.DataFrame:
     """Fetch and process device event geographic distribution."""
-    url = "https://api.fda.gov/device/event.json?count=state.exact&limit=100"
-    data = fetch_api_data(url, "device geographic distribution")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data or not data["results"]:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/device/event.json?count=state.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "device geographic distribution")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         return pd.DataFrame(columns=["State", "Count", "Percentage"])
 
-    df = pd.DataFrame(data["results"])
-    if len(df) == 0:
-        return pd.DataFrame(columns=["State", "Count", "Percentage"])
-
+    df = pd.DataFrame(all_results)
     df.columns = ["State", "Count"]
     total = df["Count"].sum()
     df["Percentage"] = (df["Count"] / total * 100).round(2).astype(str) + "%"
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 def _process_dataframe(df: pd.DataFrame, columns: List[str], total: int) -> pd.DataFrame:
     """Helper function to process DataFrame with common operations."""

@@ -14,12 +14,28 @@ import json
 @st.cache_data
 def adverse_events_by_patient_age_group_within_data_range(start_date: str, end_date: str) -> pd.DataFrame:
     """Fetch and process adverse events data by patient age group."""
-    url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.patientonsetage"
-    data = fetch_api_data(url, "Patient Age")
-    if not data or "results" not in data:
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
+
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.patientonsetage&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Patient Age")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for adverse events by age")
         return pd.DataFrame(columns=["Patient Age", "Adverse Event Count"])
-    return clean_age_data(data)
+    df = clean_age_data({"results": all_results})
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def get_aggregated_age_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -32,14 +48,28 @@ def get_aggregated_age_data(df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data
 def adverse_events_by_drug_within_data_range(start_date: str, end_date: str) -> pd.DataFrame:
     """Fetch and process adverse events data by drug."""
-    url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.drug.medicinalproduct.exact"
-    data = fetch_api_data(url, "Drug Name")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.drug.medicinalproduct.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Drug Name")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for adverse events by drug")
         return pd.DataFrame(columns=["Drug Name", "Adverse Event Count"])
 
-    df = pd.DataFrame(data["results"], columns=["term", "count"])
+    df = pd.DataFrame(all_results, columns=["term", "count"])
     df.columns = ["Drug Name", "Adverse Event Count"]
 
     # Clean and standardize drug names
@@ -49,7 +79,7 @@ def adverse_events_by_drug_within_data_range(start_date: str, end_date: str) -> 
     df = df.dropna(subset=["Drug Name", "Adverse Event Count"])
     df["Adverse Event Count"] = pd.to_numeric(df["Adverse Event Count"], errors="coerce").fillna(0).astype(int)
     df = df.drop_duplicates(subset=["Drug Name"])
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def get_top_drugs(df: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
@@ -61,17 +91,29 @@ def get_top_drugs(df: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
 @st.cache_data
 def recall_frequency_by_year() -> pd.DataFrame:
     """Fetch and process recall frequency data by year."""
-    url = "https://api.fda.gov/drug/enforcement.json?count=recall_initiation_date.year&limit=100"
-    print(f"Fetching recall frequency data from: {url}")
-    data = fetch_api_data(url, "Recall Frequency by Year")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data:
+    while True:  # Continue until no more results
+        url = f"https://api.fda.gov/drug/enforcement.json?count=recall_initiation_date.year&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Recall Frequency by Year")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for recall frequency")
-        print(f"API Response: {json.dumps(data, indent=2)}")
         return pd.DataFrame(columns=["Year", "Recall Count"])
 
     # Convert to DataFrame and process
-    df = pd.DataFrame(data["results"])
+    df = pd.DataFrame(all_results)
     df.columns = ["Year", "Recall Count"]
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
     df = df.dropna(subset=["Year", "Recall Count"])
@@ -92,16 +134,28 @@ def recall_frequency_by_year() -> pd.DataFrame:
 @st.cache_data
 def most_common_recalled_drugs() -> pd.DataFrame:
     """Fetch and process most common recalled drugs data."""
-    url = "https://api.fda.gov/drug/enforcement.json?count=product_description.exact&limit=100"
-    print(f"Fetching most common recalled drugs from: {url}")
-    data = fetch_api_data(url, "Most Common Recalled Drugs")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data:
+    while True:  # Continue until no more results
+        url = f"https://api.fda.gov/drug/enforcement.json?count=product_description.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Most Common Recalled Drugs")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for most common recalled drugs")
-        print(f"API Response: {json.dumps(data, indent=2)}")
         return pd.DataFrame(columns=["Product Description", "Recall Count"])
 
-    df = clean_recall_drug_data(data)
+    df = clean_recall_drug_data({"results": all_results})
     print(f"Processed recalled drugs data: {len(df)} rows")
     return df
 
@@ -147,17 +201,29 @@ def get_recall_reasons_pivot(df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data
 def get_actions_taken_with_drug() -> pd.DataFrame:
     """Fetch and process actions taken with drug data."""
-    url = "https://api.fda.gov/drug/event.json?search=receivedate:[20040101+TO+20250507]&count=patient.drug.actiondrug&limit=100"
-    print(f"Fetching actions taken with drug data from: {url}")
-    data = fetch_api_data(url, "Actions Taken with Drug")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{st.session_state.start_date}+TO+{st.session_state.end_date}]&count=patient.drug.actiondrug&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Actions Taken with Drug")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for actions taken with drug")
-        print(f"API Response: {json.dumps(data, indent=2)}")
         return pd.DataFrame(columns=["Action", "count"])
 
     # Create DataFrame from results
-    df = pd.DataFrame(data["results"])
+    df = pd.DataFrame(all_results)
 
     # Map numerical terms to descriptive labels
     action_mapping = {
@@ -184,21 +250,34 @@ def get_actions_taken_with_drug() -> pd.DataFrame:
     df = df[["Action", "Count"]]
 
     print(f"Processed actions taken data: {len(df)} rows")
-    return df
+    return df.head(st.session_state.top_n_results)  # Use global top N results
 
 @st.cache_data
 def adverse_events_by_country() -> pd.DataFrame:
     """Fetch and process adverse events data by country."""
-    url = "https://api.fda.gov/drug/event.json?count=occurcountry.exact&limit=100"
-    print(f"Fetching adverse events by country from: {url}")
-    data = fetch_api_data(url, "Adverse Events by Country")
+    all_results = []
+    skip = 0
+    limit = 100  # Maximum allowed per request
 
-    if not data or "results" not in data:
+    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+        url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{st.session_state.start_date}+TO+{st.session_state.end_date}]&count=occurcountry.exact&limit={limit}&skip={skip}"
+        data = fetch_api_data(url, "Adverse Events by Country")
+
+        if not data or "results" not in data or not data["results"]:
+            break
+
+        all_results.extend(data["results"])
+        skip += limit
+
+        if len(data["results"]) < limit:  # No more results available
+            break
+
+    if not all_results:
         print("No data returned for adverse events by country")
         return pd.DataFrame(columns=["Country", "Count", "Percentage"])
 
     # Convert to DataFrame and process
-    df = pd.DataFrame(data["results"])
+    df = pd.DataFrame(all_results)
     df.columns = ["Country", "Count"]
     df = df.dropna(subset=["Country", "Count"])
     df["Count"] = pd.to_numeric(df["Count"], errors="coerce").fillna(0).astype(int)
@@ -233,4 +312,4 @@ def adverse_events_by_country() -> pd.DataFrame:
     # Format percentage as string with % symbol
     df["Percentage"] = df["Percentage"].apply(lambda x: f"{x:.2f}%")
 
-    return df.sort_values("Count", ascending=False)
+    return df.head(st.session_state.top_n_results)  # Use global top N results

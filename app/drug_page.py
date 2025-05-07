@@ -58,337 +58,241 @@ def get_insights_from_data(df: pd.DataFrame, filter_range: tuple, filter_col: st
         return f"Error generating insights: {e}"
 
 def display_adverse_events_by_age():
-    """Display adverse events by patient age with bar and line charts."""
-    metric_title = "Adverse Events by Patient Age"
-    metric_description = (
-        "This metric summarizes the number of reported adverse drug events, grouped by patient age, "
-        "within a specified date range, highlighting age-related health risks."
-    )
+    """Display adverse events by age group."""
+    st.subheader("Adverse Events by Age Group")
 
-    render_metric_header(metric_title, metric_description)
-    start_str, end_str = render_date_picker()
-    try:
-        df = adverse_events_by_patient_age_group_within_data_range(start_str, end_str)
-        if df.empty:
-            st.warning("No data available for the selected date range.")
-            return
-    except Exception as e:
-        st.error(f"Failed to load data for Adverse Events by Age: {e}")
+    # Use global date range from session state
+    start_str = st.session_state.start_date
+    end_str = st.session_state.end_date
+
+    # Fetch and process data
+    df = adverse_events_by_patient_age_group_within_data_range(start_str, end_str)
+
+    if df.empty:
+        st.warning("No data available for the selected date range.")
         return
 
+    # Create visualizations
     col1, col2 = st.columns(2)
-    with col1:
-        render_data_table(df)
 
-    df = get_aggregated_age_data(df)
-    filtered_df = render_age_filter(df)
+    with col1:
+        # Bar chart
+        fig = px.bar(
+            df,
+            x="Patient Age",
+            y="Adverse Event Count",
+            title="Adverse Events by Age Group",
+            labels={"Patient Age": "Age Group", "Adverse Event Count": "Number of Events"}
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        st.subheader("Bar Chart")
-        render_bar_chart(
-            filtered_df,
-            x_col="Patient Age",
-            y_col="Adverse Event Count",
-            title="Adverse Events by Patient Age",
-            x_label="Age of Patient",
-            y_label="Number of Adverse Events"
+        # Pie chart
+        fig = px.pie(
+            df,
+            values="Adverse Event Count",
+            names="Patient Age",
+            title="Distribution of Adverse Events by Age Group"
         )
+        st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Line Chart")
-    render_line_chart(
-        filtered_df,
-        x_col="Patient Age",
-        y_col="Adverse Event Count",
-        title="Adverse Events by Patient Age",
-        x_label="Age of Patient",
-        y_label="Number of Adverse Events"
-    )
+    # Display detailed statistics
+    st.subheader("Detailed Statistics")
+    st.dataframe(df)
 
-    # AI Insights with Custom Question
-    st.markdown("### Insights")
-    if st.button("Get General Insights for Age Data"):
-        insights = get_insights_from_data(filtered_df, (int(filtered_df["Patient Age"].min()), int(filtered_df["Patient Age"].max())), "Patient Age")
+    # AI Insights section
+    st.subheader("AI Insights")
+    if st.button("Generate Insights", key="age_insights"):
+        insights = get_insights_from_data(df)
         st.write(insights)
 
-    custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which age group has the most adverse events?')", key="age_insight_question")
-    if custom_question:
-        insights = get_insights_from_data(filtered_df, (int(filtered_df["Patient Age"].min()), int(filtered_df["Patient Age"].max())), "Patient Age", custom_question)
+    # Custom question input
+    question = st.text_input("Ask a specific question about the data", key="age_question")
+    if question and st.button("Get Answer", key="age_answer"):
+        insights = get_insights_from_data(df, question)
         st.write(insights)
 
 def display_adverse_events_by_drug():
-    """Display adverse events by drug with a bar chart."""
-    metric_title = "Adverse Events by Drug"
-    metric_description = (
-        "This metric shows the number of reported adverse drug events, grouped by drug name, "
-        "within a specified date range, highlighting drugs with higher risks."
-    )
+    """Display adverse events by drug."""
+    st.subheader("Adverse Events by Drug")
 
-    render_metric_header(metric_title, metric_description)
-    start_str, end_str = render_date_picker(key_prefix="drug_")
-    try:
-        df_drug = adverse_events_by_drug_within_data_range(start_str, end_str)
-        if df_drug.empty:
-            st.warning("No data available for the selected date range.")
-            return
-    except Exception as e:
-        st.error(f"Failed to load data for Adverse Events by Drug: {e}")
+    # Use global date range from session state
+    start_str = st.session_state.start_date
+    end_str = st.session_state.end_date
+
+    # Fetch and process data
+    df = adverse_events_by_drug_within_data_range(start_str, end_str)
+
+    if df.empty:
+        st.warning("No data available for the selected date range.")
         return
 
+    # Create visualizations
     col1, col2 = st.columns(2)
-    with col1:
-        render_data_table(df_drug)
 
-    df_drug = get_top_drugs(df_drug)
+    with col1:
+        # Bar chart
+        fig = px.bar(
+            df,
+            x="Drug Name",
+            y="Adverse Event Count",
+            title="Adverse Events by Drug",
+            labels={"Drug Name": "Drug", "Adverse Event Count": "Number of Events"}
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        st.subheader("Bar Chart")
-        render_bar_chart(
-            df_drug,
-            x_col="Drug Name",
-            y_col="Adverse Event Count",
-            title="Adverse Events by Drug (Top 20)",
-            x_label="Drug Name",
-            y_label="Number of Adverse Events"
+        # Pie chart
+        fig = px.pie(
+            df,
+            values="Adverse Event Count",
+            names="Drug Name",
+            title="Distribution of Adverse Events by Drug"
         )
+        st.plotly_chart(fig, use_container_width=True)
 
-    # AI Insights with Custom Question
-    st.markdown("### Insights")
-    if st.button("Get General Insights for Drug Data"):
-        insights = get_insights_from_data(df_drug, (df_drug["Drug Name"].iloc[0], df_drug["Drug Name"].iloc[-1]), "Drug Name")
+    # Display detailed statistics
+    st.subheader("Detailed Statistics")
+    st.dataframe(df)
+
+    # AI Insights section
+    st.subheader("AI Insights")
+    if st.button("Generate Insights", key="drug_insights"):
+        insights = get_insights_from_data(df)
         st.write(insights)
 
-    custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which drug has the highest adverse events?')", key="drug_insight_question")
-    if custom_question:
-        insights = get_insights_from_data(df_drug, (df_drug["Drug Name"].iloc[0], df_drug["Drug Name"].iloc[-1]), "Drug Name", custom_question)
+    # Custom question input
+    question = st.text_input("Ask a specific question about the data", key="drug_question")
+    if question and st.button("Get Answer", key="drug_answer"):
+        insights = get_insights_from_data(df, question)
         st.write(insights)
 
 def display_global_adverse_events():
-    """Display global distribution of adverse drug events with world map and heatmap."""
-    metric_title = "Global Distribution of Adverse Drug Events"
-    metric_description = (
-        "This section shows the global distribution of adverse drug events, "
-        "highlighting countries with the highest reported incidents as a percentage of total events."
-    )
+    """Display global adverse events distribution."""
+    st.subheader("Global Adverse Events Distribution")
 
-    render_metric_header(metric_title, metric_description)
+    # Fetch and process data
+    df = adverse_events_by_country()
 
-    # Initialize df_country outside try block so it can be used in insights
-    df_country = None
-
-    try:
-        df_country = adverse_events_by_country()
-        if df_country.empty:
-            st.warning("No data available for adverse events by country.")
-            return
-
-        # Convert percentage strings back to numbers for plotting
-        df_country["Percentage_Value"] = df_country["Percentage"].str.rstrip("%").astype(float)
-
-        # Create three columns for the visualizations
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # Create bar chart for top 10 countries
-            top_10 = df_country.head(10)
-            fig_bar = px.bar(
-                top_10,
-                x="Country",
-                y="Percentage_Value",
-                text="Percentage",
-                title="Top 10 Countries by Adverse Events",
-                labels={
-                    "Country": "Country",
-                    "Percentage_Value": "Percentage of Total Events",
-                    "Percentage": "Percentage"
-                }
-            )
-            fig_bar.update_traces(textposition='outside')
-            fig_bar.update_layout(
-                xaxis_tickangle=-45,
-                showlegend=False,
-                margin=dict(l=0, r=0, t=30, b=0)
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-        with col2:
-            # Create pie chart for top 5 countries vs rest of the world
-            top_5 = df_country.head(5)
-            rest_of_world = pd.DataFrame({
-                'Country': ['Rest of World'],
-                'Percentage_Value': [df_country['Percentage_Value'][5:].sum()],
-                'Percentage': [f"{df_country['Percentage_Value'][5:].sum():.2f}%"]
-            })
-            pie_data = pd.concat([top_5, rest_of_world])
-
-            fig_pie = px.pie(
-                pie_data,
-                values="Percentage_Value",
-                names="Country",
-                title="Distribution of Adverse Events: Top 5 Countries vs Rest of World",
-                hover_data=["Percentage"]
-            )
-            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        # Create world map
-        fig_map = px.choropleth(
-            df_country,
-            locations="Country",
-            locationmode="country names",
-            color="Percentage_Value",
-            hover_name="Country",
-            hover_data={
-                "Count": True,
-                "Percentage": True,
-                "Country": False,
-                "Percentage_Value": False
-            },
-            color_continuous_scale="Viridis",
-            range_color=[0, df_country["Percentage_Value"].quantile(0.95)],
-            title="Global Distribution of Adverse Drug Events (Percentage)"
-        )
-        fig_map.update_layout(
-            geo=dict(
-                showframe=False,
-                showcoastlines=True,
-                projection_type='equirectangular'
-            ),
-            margin=dict(l=0, r=0, t=30, b=0)
-        )
-        st.plotly_chart(fig_map, use_container_width=True)
-
-        # Display detailed statistics in a collapsible section
-        st.markdown("### Detailed Statistics")
-        display_df = df_country.drop(columns=["Percentage_Value"])
-        render_data_table(display_df)
-
-    except Exception as e:
-        st.error(f"Failed to load data for Global Adverse Events: {e}")
+    if df.empty:
+        st.warning("No data available for the selected date range.")
         return
 
-    # AI Insights section (outside the try block)
-    if df_country is not None:
-        st.markdown("### Insights")
-        if st.button("Get General Insights for Global Adverse Events"):
-            prompt = f"""
-            Analyze the following global adverse drug events data and provide 5-7 key insights:
+    # Create visualizations
+    col1, col2 = st.columns(2)
 
-            Top 5 Countries and their percentages:
-            {df_country.head().to_string()}
+    with col1:
+        # Bar chart
+        fig = px.bar(
+            df,
+            x="Country",
+            y="Count",
+            title="Adverse Events by Country",
+            labels={"Country": "Country", "Count": "Number of Events"}
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
 
-            Total number of countries: {len(df_country)}
-            Total number of events: {df_country['Count'].sum()}
+    with col2:
+        # Pie chart
+        fig = px.pie(
+            df,
+            values="Count",
+            names="Country",
+            title="Distribution of Adverse Events by Country"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-            Focus on:
-            1. Geographic distribution patterns
-            2. Concentration of events
-            3. Notable regional differences
-            4. Potential implications for drug safety monitoring
-            5. Recommendations for global drug safety
+    # Display detailed statistics
+    st.subheader("Detailed Statistics")
+    st.dataframe(df)
 
-            Provide a concise analysis in 5-7 sentences.
-            """
-            insights = get_insights_from_data(df_country, (df_country["Country"].iloc[0], df_country["Country"].iloc[-1]), "Country", prompt)
-            st.write(insights)
+    # AI Insights section
+    st.subheader("AI Insights")
+    if st.button("Generate Insights", key="global_insights"):
+        insights = get_insights_from_data(df)
+        st.write(insights)
 
-        custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which country has the highest percentage of adverse events?')", key="country_insight_question")
-        if custom_question:
-            prompt = f"""
-            Based on the following data about global adverse drug events:
-            {df_country.head().to_string()}
-
-            Answer this specific question in 5-7 sentences, focusing on data-driven insights and potential implications:
-            {custom_question}
-            """
-            insights = get_insights_from_data(df_country, (df_country["Country"].iloc[0], df_country["Country"].iloc[-1]), "Country", prompt)
-            st.write(insights)
+    # Custom question input
+    question = st.text_input("Ask a specific question about the data", key="global_question")
+    if question and st.button("Get Answer", key="global_answer"):
+        insights = get_insights_from_data(df, question)
+        st.write(insights)
 
 def display_actions_taken_with_drug():
-    """Display actions taken with the drug after adverse events as a pie chart."""
-    metric_title = "Actions Taken with the Drug After Adverse Events"
-    metric_description = (
-        "This metric shows the actions taken with the drug following an adverse event, such as withdrawal, dose adjustment, or no change, "
-        "based on data from 2004 to 2025."
-    )
+    """Display actions taken with drug data."""
+    st.subheader("Actions Taken with Drug")
 
-    render_metric_header(metric_title, metric_description)
+    # Fetch and process data
+    df = get_actions_taken_with_drug()
 
-    try:
-        df = get_actions_taken_with_drug()
-        if df.empty:
-            st.warning("No data available for Actions Taken with Drug.")
-            return
+    if df.empty:
+        st.warning("No data available for the selected date range.")
+        return
 
-        # Create two columns for the layout
-        col1, col2 = st.columns(2)
+    # Create visualizations
+    col1, col2 = st.columns(2)
 
-        with col1:
-            # Display the raw data
-            st.markdown("### Data Table")
-            render_data_table(df)
+    with col1:
+        # Bar chart
+        fig = px.bar(
+            df,
+            x="Action",
+            y="Count",
+            title="Actions Taken with Drug",
+            labels={"Action": "Action", "Count": "Number of Cases"}
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
 
-        with col2:
-            # Create and display the pie chart
-            fig = px.pie(
-                df,
-                names="Action",
-                values="Count",
-                title="Actions Taken with the Drug",
-                labels={"Action": "Action Taken", "Count": "Number of Records"},
-                hover_data=["Count"]
-            )
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        # Pie chart
+        fig = px.pie(
+            df,
+            values="Count",
+            names="Action",
+            title="Distribution of Actions Taken with Drug"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-        # AI Insights with Custom Question
-        st.markdown("### Insights")
-        if st.button("Get General Insights for Actions Taken"):
-            prompt = f"""
-            Analyze the following data about actions taken with drugs after adverse events:
-            {df.to_string()}
+    # Display detailed statistics
+    st.subheader("Detailed Statistics")
+    st.dataframe(df)
 
-            Focus on:
-            1. Most common actions taken
-            2. Distribution of different actions
-            3. Implications for drug safety
-            4. Potential impact on patient care
-            5. Recommendations for drug monitoring
+    # AI Insights section
+    st.subheader("AI Insights")
+    if st.button("Generate Insights", key="actions_insights"):
+        insights = get_insights_from_data(df)
+        st.write(insights)
 
-            Provide a comprehensive analysis in 5-7 sentences.
-            """
-            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug", prompt)
-            st.write(insights)
-
-        custom_question = st.text_input("Ask a specific question about this data (e.g., 'What is the most common action taken?')", key="actions_taken_insight_question")
-        if custom_question:
-            prompt = f"""
-            Based on the following data about actions taken with drugs:
-            {df.to_string()}
-
-            Answer this specific question in 5-7 sentences, focusing on data-driven insights and potential implications:
-            {custom_question}
-            """
-            insights = get_insights_from_data(df, (df["Action"].iloc[0], df["Action"].iloc[-1]), "Actions Taken with the Drug", prompt)
-            st.write(insights)
-
-    except Exception as e:
-        st.error(f"Failed to load data for Actions Taken with Drug: {e}")
+    # Custom question input
+    question = st.text_input("Ask a specific question about the data", key="actions_question")
+    if question and st.button("Get Answer", key="actions_answer"):
+        insights = get_insights_from_data(df, question)
+        st.write(insights)
 
 def display_drug_reports():
-    """Display all drug-related reports with navigation tabs."""
+    """Display drug reports with various visualizations."""
     st.title("Drug Reports")
-    tabs = st.tabs([
+
+    # Create tabs for different sections
+    tab1, tab2, tab3, tab4 = st.tabs([
         "Adverse Events by Age",
         "Adverse Events by Drug",
         "Global Adverse Events",
-        "Actions Taken with the Drug"
+        "Actions Taken with Drug"
     ])
 
-    with tabs[0]:
+    with tab1:
         display_adverse_events_by_age()
-    with tabs[1]:
+
+    with tab2:
         display_adverse_events_by_drug()
-    with tabs[2]:
+
+    with tab3:
         display_global_adverse_events()
-    with tabs[3]:
+
+    with tab4:
         display_actions_taken_with_drug()

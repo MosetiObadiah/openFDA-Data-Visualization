@@ -1,15 +1,5 @@
 import pandas as pd
 
-def clean_drug_data(data: dict) -> pd.DataFrame:
-    df = pd.DataFrame(data["results"], columns=["term", "count"])
-    df.columns = ["Drug Name", "Adverse Event Count"]
-
-    df["Drug Name"] = df["Drug Name"].str.replace(r"\.$", "", regex=True)
-    df["Drug Name"] = df["Drug Name"].str.strip().str.upper()
-    df = df.dropna(subset=["Drug Name", "Adverse Event Count"])
-    df["Adverse Event Count"] = pd.to_numeric(df["Adverse Event Count"], errors="coerce").fillna(0).astype(int)
-    df = df.drop_duplicates(subset=["Drug Name"])
-    return df
 
 def clean_age_data(data: dict) -> pd.DataFrame:
     df = pd.DataFrame(data["results"], columns=["term", "count"])

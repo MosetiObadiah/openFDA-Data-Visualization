@@ -4,29 +4,72 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.drug_events import (
-    adverse_events_by_drug_name_within_data_range,
-    adverse_events_by_patient_age_group_within_data_range
+from drug_page import (
+    display_drug_reports
 )
 
-st.title("OpenFDA Data Visualization")
+def display_home_page():
+    st.markdown("# OpenFDA Data Visualization Dashboard")
 
-def fetch_all_data():
-    adverse_events_by_patient_age_group_within_data_range()
-    adverse_events_by_drug_name_within_data_range()
+    st.markdown("## Overview")
+    st.markdown("Interactive dashboard analyzing adverse drug events from the [OpenFDA API](https://open.fda.gov/apis/drug/event/). Features include sentiment analysis, demographic insights, and trend visualization.")
 
-if st.button(label="FETCH DATA", help="This gets the latest data from the API"):
-    fetch_all_data()
-    st.success("Data fetched and saved to CSV.")
+    col1, col2 = st.columns(2)
 
-result = adverse_events_by_drug_name_within_data_range()
-st.dataframe(data=result)
+    with col1:
+        st.markdown("### Key Features")
+        st.markdown("""
+        - **Data Analysis**
+          - 1,000+ adverse event reports
+          - Patient demographics
+          - Monthly trends
+          - Common reactions
 
-if not isinstance(result, pd.DataFrame):
-    st.error("The function did not return a pandas DataFrame")
-else:
-    if 'Drug Name' in result.columns and 'Adverse Event Count' in result.columns:
-        df_chart = result.set_index('Drug Name')[['Adverse Event Count']]
-        st.bar_chart(df_chart)
-    else:
-        st.error("DataFrame must contain 'Drug Name' and 'Adverse Event Count' columns")
+        - **AI Integration**
+          - Sentiment analysis
+          - Pattern recognition
+          - Risk scoring
+        """)
+
+    with col2:
+        st.markdown("### Dashboard Sections")
+        st.markdown("""
+        - **Drug Reports**
+          - Adverse reactions
+          - Monthly trends
+          - Event summaries
+
+        - **Demographics**
+          - Age/sex distribution
+          - Geographic patterns
+
+        - **Sentiment Analysis**
+          - Reaction sentiment
+          - Risk assessment
+        """)
+
+    st.markdown("---")
+
+st.set_page_config(
+    page_title="OpenFDA Dashboard",
+    layout="wide"
+    )
+
+tabs = st.tabs(["Home", "Drugs", "Devices", "Food", "Tobacco"])
+
+with tabs[0]:
+    display_home_page()
+
+with tabs[1]:
+    st.title("Drug Reports")
+    display_drug_reports()
+
+with tabs[2]:
+    st.title("Device Reports")
+
+with tabs[3]:
+    st.title("Food Reports")
+
+
+with tabs[4]:
+    st.title("Tobacco Reports")

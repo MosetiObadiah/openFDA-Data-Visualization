@@ -15,7 +15,8 @@ from src.drug_events import (
     get_aggregated_age_data,
     get_top_drugs,
     get_recall_reasons_pivot,
-    get_actions_taken_with_drug
+    get_actions_taken_with_drug,
+    adverse_events_by_country
 )
 from src.components import (
     render_metric_header,
@@ -160,106 +161,146 @@ def display_adverse_events_by_drug():
         insights = get_insights_from_data(df_drug, (df_drug["Drug Name"].iloc[0], df_drug["Drug Name"].iloc[-1]), "Drug Name", custom_question)
         st.write(insights)
 
-def display_drug_recall_trends():
-    """Display drug recall trends including frequency, common drugs, and reasons over time."""
-    metric_title = "Drug Recall Trends"
+def display_global_adverse_events():
+    """Display global distribution of adverse drug events with world map and heatmap."""
+    metric_title = "Global Distribution of Adverse Drug Events"
     metric_description = (
-        "This section analyzes drug recall trends from the OpenFDA Drug Enforcement Reports, "
-        "including frequency of recalls by year, most commonly recalled drugs, and reasons for recalls over time."
+        "This section shows the global distribution of adverse drug events, "
+        "highlighting countries with the highest reported incidents as a percentage of total events."
     )
 
     render_metric_header(metric_title, metric_description)
 
-    # Frequency of Recalls by Year
-    st.subheader("Frequency of Recalls by Year")
+    # Initialize df_country outside try block so it can be used in insights
+    df_country = None
+
     try:
-        df_recall_freq = recall_frequency_by_year()
-        if df_recall_freq.empty:
-            st.warning("No recall frequency data available.")
-        else:
-            render_data_table(df_recall_freq)
-            render_bar_chart(
-                df_recall_freq,
-                x_col="Year",
-                y_col="Recall Count",
-                title="Drug Recalls by Year",
-                x_label="Year",
-                y_label="Number of Recalls"
+        df_country = adverse_events_by_country()
+        if df_country.empty:
+            st.warning("No data available for adverse events by country.")
+            return
+
+        # Convert percentage strings back to numbers for plotting
+        df_country["Percentage_Value"] = df_country["Percentage"].str.rstrip("%").astype(float)
+
+        # Create three columns for the visualizations
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Create bar chart for top 10 countries
+            top_10 = df_country.head(10)
+            fig_bar = px.bar(
+                top_10,
+                x="Country",
+                y="Percentage_Value",
+                text="Percentage",
+                title="Top 10 Countries by Adverse Events",
+                labels={
+                    "Country": "Country",
+                    "Percentage_Value": "Percentage of Total Events",
+                    "Percentage": "Percentage"
+                }
             )
-
-            # AI Insights with Custom Question
-            st.markdown("### Insights for Recall Frequency")
-            if st.button("Get General Insights for Recall Frequency"):
-                insights = get_insights_from_data(df_recall_freq, (int(df_recall_freq["Year"].min()), int(df_recall_freq["Year"].max())), "Year")
-                st.write(insights)
-
-            custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which year had the most recalls?')", key="recall_freq_insight_question")
-            if custom_question:
-                insights = get_insights_from_data(df_recall_freq, (int(df_recall_freq["Year"].min()), int(df_recall_freq["Year"].max())), "Year", custom_question)
-                st.write(insights)
-    except Exception as e:
-        st.error(f"Failed to load data for Recall Frequency: {e}")
-
-    # Most Commonly Recalled Drugs
-    st.subheader("Most Commonly Recalled Drugs")
-    try:
-        df_recall_drugs = most_common_recalled_drugs()
-        if df_recall_drugs.empty:
-            st.warning("No data available for recalled drugs.")
-        else:
-            render_data_table(df_recall_drugs)
-            render_bar_chart(
-                df_recall_drugs,
-                x_col="Product Description",
-                y_col="Recall Count",
-                title="Most Commonly Recalled Drugs (Top 20)",
-                x_label="Drug/Product",
-                y_label="Number of Recalls"
+            fig_bar.update_traces(textposition='outside')
+            fig_bar.update_layout(
+                xaxis_tickangle=-45,
+                showlegend=False,
+                margin=dict(l=0, r=0, t=30, b=0)
             )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-            # AI Insights with Custom Question
-            st.markdown("### Insights for Recalled Drugs")
-            if st.button("Get General Insights for Recalled Drugs"):
-                insights = get_insights_from_data(df_recall_drugs, (df_recall_drugs["Product Description"].iloc[0], df_recall_drugs["Product Description"].iloc[-1]), "Product Description")
-                st.write(insights)
+        with col2:
+            # Create pie chart for top 5 countries vs rest of the world
+            top_5 = df_country.head(5)
+            rest_of_world = pd.DataFrame({
+                'Country': ['Rest of World'],
+                'Percentage_Value': [df_country['Percentage_Value'][5:].sum()],
+                'Percentage': [f"{df_country['Percentage_Value'][5:].sum():.2f}%"]
+            })
+            pie_data = pd.concat([top_5, rest_of_world])
 
-            custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which drug was recalled the most?')", key="recall_drugs_insight_question")
-            if custom_question:
-                insights = get_insights_from_data(df_recall_drugs, (df_recall_drugs["Product Description"].iloc[0], df_recall_drugs["Product Description"].iloc[-1]), "Product Description", custom_question)
-                st.write(insights)
-    except Exception as e:
-        st.error(f"Failed to load data for Most Commonly Recalled Drugs: {e}")
-
-    # Recall Reasons Over Time
-    st.subheader("Recall Reasons Over Time")
-    try:
-        df_recall_reasons = recall_reasons_over_time()
-        if df_recall_reasons.empty:
-            st.warning("No recall reasons data available.")
-        else:
-            df_pivot = get_recall_reasons_pivot(df_recall_reasons)
-            render_data_table(df_pivot)
-            render_line_chart(
-                df_pivot.melt(id_vars=["Year"], var_name="Reason Category", value_name="Recall Count"),
-                x_col="Year",
-                y_col="Recall Count",
-                title="Recall Reasons Over Time",
-                x_label="Year",
-                y_label="Number of Recalls"
+            fig_pie = px.pie(
+                pie_data,
+                values="Percentage_Value",
+                names="Country",
+                title="Distribution of Adverse Events: Top 5 Countries vs Rest of World",
+                hover_data=["Percentage"]
             )
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_pie, use_container_width=True)
 
-            # AI Insights with Custom Question
-            st.markdown("### Insights for Recall Reasons")
-            if st.button("Get General Insights for Recall Reasons"):
-                insights = get_insights_from_data(df_pivot, (int(df_pivot["Year"].min()), int(df_pivot["Year"].max())), "Year")
-                st.write(insights)
+        # Create world map
+        fig_map = px.choropleth(
+            df_country,
+            locations="Country",
+            locationmode="country names",
+            color="Percentage_Value",
+            hover_name="Country",
+            hover_data={
+                "Count": True,
+                "Percentage": True,
+                "Country": False,
+                "Percentage_Value": False
+            },
+            color_continuous_scale="Viridis",
+            range_color=[0, df_country["Percentage_Value"].quantile(0.95)],
+            title="Global Distribution of Adverse Drug Events (Percentage)"
+        )
+        fig_map.update_layout(
+            geo=dict(
+                showframe=False,
+                showcoastlines=True,
+                projection_type='equirectangular'
+            ),
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
 
-            custom_question = st.text_input("Ask a specific question about this data (e.g., 'What is the most common reason for recalls over time?')", key="recall_reasons_insight_question")
-            if custom_question:
-                insights = get_insights_from_data(df_pivot, (int(df_pivot["Year"].min()), int(df_pivot["Year"].max())), "Year", custom_question)
-                st.write(insights)
+        # Display detailed statistics in a collapsible section
+        st.markdown("### Detailed Statistics")
+        display_df = df_country.drop(columns=["Percentage_Value"])
+        render_data_table(display_df)
+
     except Exception as e:
-        st.error(f"Failed to load data for Recall Reasons: {e}")
+        st.error(f"Failed to load data for Global Adverse Events: {e}")
+        return
+
+    # AI Insights section (outside the try block)
+    if df_country is not None:
+        st.markdown("### Insights")
+        if st.button("Get General Insights for Global Adverse Events"):
+            prompt = f"""
+            Analyze the following global adverse drug events data and provide 5-7 key insights:
+
+            Top 5 Countries and their percentages:
+            {df_country.head().to_string()}
+
+            Total number of countries: {len(df_country)}
+            Total number of events: {df_country['Count'].sum()}
+
+            Focus on:
+            1. Geographic distribution patterns
+            2. Concentration of events
+            3. Notable regional differences
+            4. Potential implications for drug safety monitoring
+            5. Recommendations for global drug safety
+
+            Provide a concise analysis in 5-7 sentences.
+            """
+            insights = get_insights_from_data(df_country, (df_country["Country"].iloc[0], df_country["Country"].iloc[-1]), "Country", prompt)
+            st.write(insights)
+
+        custom_question = st.text_input("Ask a specific question about this data (e.g., 'Which country has the highest percentage of adverse events?')", key="country_insight_question")
+        if custom_question:
+            prompt = f"""
+            Based on the following data about global adverse drug events:
+            {df_country.head().to_string()}
+
+            Answer this specific question in 5-7 sentences, focusing on data-driven insights and potential implications:
+            {custom_question}
+            """
+            insights = get_insights_from_data(df_country, (df_country["Country"].iloc[0], df_country["Country"].iloc[-1]), "Country", prompt)
+            st.write(insights)
 
 def display_actions_taken_with_drug():
     """Display actions taken with the drug after adverse events as a pie chart."""
@@ -309,7 +350,7 @@ def display_drug_reports():
     tabs = st.tabs([
         "Adverse Events by Age",
         "Adverse Events by Drug",
-        "Drug Recall Trends",
+        "Global Adverse Events",
         "Actions Taken with the Drug"
     ])
 
@@ -318,6 +359,6 @@ def display_drug_reports():
     with tabs[1]:
         display_adverse_events_by_drug()
     with tabs[2]:
-        display_drug_recall_trends()
+        display_global_adverse_events()
     with tabs[3]:
         display_actions_taken_with_drug()

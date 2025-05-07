@@ -70,9 +70,24 @@ def recall_frequency_by_year() -> pd.DataFrame:
         print(f"API Response: {json.dumps(data, indent=2)}")
         return pd.DataFrame(columns=["Year", "Recall Count"])
 
-    df = clean_recall_frequency_data(data)
-    print(f"Processed recall frequency data: {len(df)} rows")
-    return df
+    # Convert to DataFrame and process
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Year", "Recall Count"]
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
+    df = df.dropna(subset=["Year", "Recall Count"])
+    df["Recall Count"] = pd.to_numeric(df["Recall Count"], errors="coerce").fillna(0).astype(int)
+    df = df.sort_values("Year")
+
+    # Create a pivot table for heatmap
+    df_pivot = df.pivot_table(
+        index=df["Year"].dt.year,
+        columns=df["Year"].dt.month,
+        values="Recall Count",
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    return df_pivot
 
 @st.cache_data
 def most_common_recalled_drugs() -> pd.DataFrame:
@@ -170,3 +185,52 @@ def get_actions_taken_with_drug() -> pd.DataFrame:
 
     print(f"Processed actions taken data: {len(df)} rows")
     return df
+
+@st.cache_data
+def adverse_events_by_country() -> pd.DataFrame:
+    """Fetch and process adverse events data by country."""
+    url = "https://api.fda.gov/drug/event.json?count=occurcountry.exact&limit=100"
+    print(f"Fetching adverse events by country from: {url}")
+    data = fetch_api_data(url, "Adverse Events by Country")
+
+    if not data or "results" not in data:
+        print("No data returned for adverse events by country")
+        return pd.DataFrame(columns=["Country", "Count", "Percentage"])
+
+    # Convert to DataFrame and process
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Country", "Count"]
+    df = df.dropna(subset=["Country", "Count"])
+    df["Count"] = pd.to_numeric(df["Count"], errors="coerce").fillna(0).astype(int)
+
+    # Standardize country names
+    country_mapping = {
+        "US": "United States",
+        "USA": "United States",
+        "UNITED STATES": "United States",
+        "UNITED KINGDOM": "United Kingdom",
+        "UK": "United Kingdom",
+        "GREAT BRITAIN": "United Kingdom",
+        "RUSSIAN FEDERATION": "Russia",
+        "RUSSIA": "Russia",
+        "PEOPLE'S REPUBLIC OF CHINA": "China",
+        "CHINA": "China",
+        "REPUBLIC OF KOREA": "South Korea",
+        "SOUTH KOREA": "South Korea",
+        "KOREA": "South Korea",
+        "REPUBLIC OF INDIA": "India",
+        "INDIA": "India"
+    }
+    df["Country"] = df["Country"].str.upper().map(lambda x: country_mapping.get(x, x.title()))
+
+    # Group by standardized country names and sum counts
+    df = df.groupby("Country", as_index=False)["Count"].sum()
+
+    # Calculate percentage of total
+    total_count = df["Count"].sum()
+    df["Percentage"] = (df["Count"] / total_count * 100).round(2)
+
+    # Format percentage as string with % symbol
+    df["Percentage"] = df["Percentage"].apply(lambda x: f"{x:.2f}%")
+
+    return df.sort_values("Count", ascending=False)

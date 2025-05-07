@@ -1,75 +1,99 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from datetime import date
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
-from src.drug_events import adverse_events_by_patient_age_group_within_data_range
+from src.drug_events import (
+    adverse_events_by_patient_age_group_within_data_range,
+    adverse_events_by_drug_within_data_range
+)
+from src.components import (
+    render_metric_header,
+    render_date_picker,
+    render_data_table,
+    render_age_filter,
+    render_bar_chart,
+    render_line_chart
+)
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+def get_insights_from_data(df: pd.DataFrame, filter_range: tuple, filter_col: str) -> str:
+    """Use Gemini API to generate insights from the DataFrame and filter range."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    prompt = f"""
+    Analyze the following data about adverse drug events by {filter_col}, filtered for {filter_col} from {filter_range[0]} to {filter_range[1]}:
+
+    {df.to_string()}
+
+    Provide a concise explanation (3-5 sentences) of what the user is seeing, highlighting key trends, patterns, or notable points in the data. Use a conversational tone as if explaining to a non-expert.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Error generating insights: {e}"
 
 def display_drug_reports():
-    st.subheader("Adverse Events by Patient Age")
-    st.write("This metric summarizes the number of reported adverse drug events, grouped by patient age, within a specified date range, highlighting age-related health risks.")
-
-    # Date range selection side by side
-    col1, col2 = st.columns(2)
-
-    with col1:
-        start = st.date_input("Data start date", value=date(2010, 1, 1), min_value=date(2010, 1, 1), max_value=date(2025, 1, 31), key="start_date")
-    with col2:
-        end = st.date_input("Data end date", value=date(2025, 1, 31), min_value=date(2010, 1, 1), max_value=date(2025, 1, 31), key="end_date")
-
-    start_str = start.strftime("%Y%m%d")
-    end_str = end.strftime("%Y%m%d")
-
-    # Api call with selected date range
-    df = adverse_events_by_patient_age_group_within_data_range(start_str, end_str)
-
-    with col1:
-        with st.expander("See raw table data", expanded=True):
-            st.dataframe(data=df, width=500, use_container_width=False)
-
-    # Group and sort
-    df = df.groupby("Patient Age", as_index=False).agg({"Adverse Event Count": "sum"})
-    df = df.sort_values("Patient Age")
-
-    # Add slider to filter age
-    min_age = int(df["Patient Age"].min())
-    max_age = int(df["Patient Age"].max())
-
-    age_range = st.slider(
-        "Filter by Patient Age",
-        min_value=min_age,
-        max_value=max_age,
-        value=(min_age, max_age),
-        step=1
+    # Adverse Events by Patient Age
+    metric_title = "Adverse Events by Patient Age"
+    metric_description = (
+        "This metric summarizes the number of reported adverse drug events, grouped by patient age, "
+        "within a specified date range, highlighting age-related health risks."
     )
 
-    filtered_df = df[(df["Patient Age"] >= age_range[0]) & (df["Patient Age"] <= age_range[1])]
+    render_metric_header(metric_title, metric_description)
+    start_str, end_str = render_date_picker()
+    df = adverse_events_by_patient_age_group_within_data_range(start_str, end_str)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        render_data_table(df)
+
+    df = df.groupby("Patient Age", as_index=False).agg({"Adverse Event Count": "sum"})
+    df = df.sort_values("Patient Age")
+    filtered_df = render_age_filter(df)
+
+    if st.button("Get Insights for Age Data"):
+        insights = get_insights_from_data(filtered_df, (int(filtered_df["Patient Age"].min()), int(filtered_df["Patient Age"].max())), "Patient Age")
+        st.markdown("### Insights")
+        st.write(insights)
 
     with col2:
         st.subheader("Bar Chart")
-        # Bar chart
-        fig_bar = px.bar(
+        render_bar_chart(
             filtered_df,
-            x="Patient Age",
-            y="Adverse Event Count",
+            x_col="Patient Age",
+            y_col="Adverse Event Count",
             title="Adverse Events by Patient Age",
-            labels={
-                "Patient Age": "Age of Patient",
-                "Adverse Event Count": "Number of Adverse Events"
-            }
+            x_label="Age of Patient",
+            y_label="Number of Adverse Events"
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
 
     st.subheader("Line Chart")
-    # Line chart
-    fig_line = px.line(
+    render_line_chart(
         filtered_df,
-        x="Patient Age",
-        y="Adverse Event Count",
+        x_col="Patient Age",
+        y_col="Adverse Event Count",
         title="Adverse Events by Patient Age",
-        labels={
-            "Patient Age": "Age of Patient",
-            "Adverse Event Count": "Number of Adverse Events"
-        }
+        x_label="Age of Patient",
+        y_label="Number of Adverse Events"
     )
-    st.plotly_chart(fig_line, use_container_width=True)
+
+    # Add drug data section
+    st.markdown("---")
+    st.subheader("AI Insights")
+
+    if not filtered_df.empty:
+        with st.expander("View AI reference table data", expanded=False):
+            st.dataframe(filtered_df)
+
+        if st.button("Get Insights for Drug Data"):
+            insights = get_insights_from_data(filtered_df, (int(filtered_df["Patient Age"].min()), int(filtered_df["Patient Age"].max())), "Patient Age")
+            st.markdown("### Insights")
+            st.write(insights)
+    else:
+        st.warning("No data available for the selected date range.")

@@ -11,13 +11,10 @@ from app.device_page import display_device_reports
 from app.food_page import display_food_reports
 from app.drug_page import display_drug_reports
 from app.tobacco_page import display_tobacco_reports
-from app.animal_page import display_animal_vetdata
 from app.other_page import display_other_data
 from src.data_utils import clear_cache
 
 def display_home():
-    st.title("openFDA Data Analysis Dashboard")
-
     # Global Controls Section
     st.header("Global Controls")
 
@@ -69,11 +66,10 @@ def display_home():
         )
 
     # Dashboard Description
-    st.header("Dashboard Overview")
+    st.header("Analysis Overview")
     st.markdown("""
-    This dashboard provides comprehensive analysis of FDA data across multiple categories:
+    This site provides comprehensive analysis of openFDA for:
 
-    - **Animal & Veterinary**: Analysis of adverse events involving animal drugs and devices
     - **Devices**: Analysis of medical device events, including device class distribution, problems, and manufacturer analysis
     - **Drugs**: Analysis of drug adverse events and safety data
     - **Food**: Analysis of food recalls and safety data
@@ -172,16 +168,15 @@ def main():
 
         # Add app metadata
         st.subheader("About")
-        st.write("Created with Streamlit & OpenFDA API")
-        st.write("© 2024")
+        st.write("Created by Moseti Obadiah")
+        st.write("© 2025")
 
     # Main content area
-    st.title("openFDA Data Analysis Dashboard")
+    st.title("Data Analysis Dashboard")
 
     # Create tabs for different sections
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "Overview",
-        "Animal & Veterinary",
         "Drug Reports",
         "Device Reports",
         "Food Reports",
@@ -193,21 +188,18 @@ def main():
         display_home()
 
     with tab2:
-        display_animal_vetdata()
-
-    with tab3:
         display_drug_reports()
 
-    with tab4:
+    with tab3:
         display_device_reports()
 
-    with tab5:
+    with tab4:
         display_food_reports()
 
-    with tab6:
+    with tab5:
         display_tobacco_reports()
 
-    with tab7:
+    with tab6:
         display_other_data()
 
 if __name__ == "__main__":

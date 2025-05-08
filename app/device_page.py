@@ -366,7 +366,7 @@ def display_manufacturers():
         st.dataframe(df)
 
     # AI Insights section
-    render_ai_insights_section(df, "Manufacturers", "manufacturers")
+    render_ai_insights_section(df, "Manufacturers", "device_manufacturers")
 
 def display_enforcement_reports():
     """Display enforcement reports over time."""

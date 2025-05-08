@@ -5,6 +5,7 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import plotly.express as px
+import plotly.graph_objects as go
 
 from src.drug_events import (
     adverse_events_by_patient_age_group_within_data_range,
@@ -21,7 +22,11 @@ from src.drug_events import (
     get_drug_events_by_patient_sex,
     get_drug_events_by_patient_weight,
     get_drug_events_by_reaction_outcome,
-    get_drug_events_by_reporter_qualification
+    get_drug_events_by_reporter_qualification,
+    get_top_drug_reactions,
+    get_drug_indications,
+    get_drug_manufacturer_distribution,
+    get_drug_therapeutic_response
 )
 from src.utils import get_state_abbreviations
 from src.components import (
@@ -258,44 +263,366 @@ def display_actions_taken_with_drug():
 
 def display_drug_reports():
     st.title("Drug Reports")
+
+    # Create tabs for different analysis sections
     tab_names = [
-        "Active Ingredient (Substance)",
-        "Patient Weight"
+        "Adverse Reactions",
+        "Drug Indications",
+        "Patient Demographics",
+        "Manufacturers",
+        "Therapeutic Response",
+        "Substances"
     ]
     tabs = st.tabs(tab_names)
 
-    # 1. Active Ingredient (Substance)
+    # 1. Adverse Reactions Tab
     with tabs[0]:
-        st.subheader("Active Ingredient (Substance)")
-        df = get_drug_events_by_substance()
-        if df.empty:
-            st.warning("No data available.")
-        else:
-            top_n = st.session_state.top_n_results if "top_n_results" in st.session_state else 20
-            top_df = df.head(top_n)
-            # Generate a color map for the top N ingredients
-            color_seq = px.colors.qualitative.Plotly
-            color_map = {name: color_seq[i % len(color_seq)] for i, name in enumerate(top_df["Substance"])}
-            # Bar chart for top N
-            fig_bar = px.bar(top_df, x="Substance", y="Count", title=f"Top {top_n} Active Ingredients (Bar Chart)", color="Substance", color_discrete_map=color_map)
-            fig_bar.update_layout(xaxis_tickangle=-45, showlegend=False)
-            st.plotly_chart(fig_bar, use_container_width=True)
-            # Treemap for all results, using the same color map for top N
-            fig_all = px.treemap(df, path=["Substance"], values="Count", title="All Active Ingredients (Treemap)", color="Substance", color_discrete_map=color_map)
-            st.plotly_chart(fig_all, use_container_width=True)
-            with st.expander("Detailed Statistics", expanded=False):
-                st.dataframe(df)
-            render_ai_insights_section(df, "Active Ingredient (Substance)", "substance")
+        st.subheader("Top Adverse Reactions to Drugs")
+        df_reactions = get_top_drug_reactions(
+            st.session_state.start_date,
+            st.session_state.end_date,
+            st.session_state.sample_size
+        )
 
-    # 2. Patient Weight
-    with tabs[1]:
-        st.subheader("Patient Weight")
-        df_weight = get_drug_events_by_patient_weight()
-        if df_weight.empty:
-            st.warning("No data available for patient weight.")
+        if df_reactions.empty:
+            st.warning("No adverse reaction data available.")
         else:
-            fig_weight = px.bar(df_weight, x="Weight Group", y="Count", title="Distribution by Patient Weight Group")
-            st.plotly_chart(fig_weight, use_container_width=True)
-            with st.expander("Detailed Weight Statistics", expanded=False):
+            # Display top reactions by count
+            top_n = st.slider("Number of top reactions to show", 5, 30, 15, key="drug_reaction_slider")
+            top_df = df_reactions.head(top_n)
+
+            # Create visualizations
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Bar chart for top N reactions
+                fig_bar = px.bar(
+                    top_df,
+                    x="Count",
+                    y="Reaction",
+                    title=f"Top {top_n} Adverse Reactions",
+                    orientation='h',
+                    color="Category"
+                )
+                fig_bar.update_layout(yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+            with col2:
+                # Pie chart for reaction categories
+                category_df = df_reactions.groupby("Category")["Count"].sum().reset_index()
+                fig_pie = px.pie(
+                    category_df,
+                    values="Count",
+                    names="Category",
+                    title="Adverse Reactions by Category"
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+            # Display detailed statistics in an expander
+            with st.expander("Detailed Reaction Statistics", expanded=False):
+                st.dataframe(df_reactions.style.highlight_max(subset=["Count"], color='lightgreen'))
+
+            # AI Insights section
+            render_ai_insights_section(df_reactions, "Drug Adverse Reactions", "drug_reactions")
+
+    # 2. Drug Indications Tab
+    with tabs[1]:
+        st.subheader("Common Drug Indications")
+        df_indications = get_drug_indications(
+            st.session_state.start_date,
+            st.session_state.end_date,
+            st.session_state.sample_size
+        )
+
+        if df_indications.empty:
+            st.warning("No drug indication data available.")
+        else:
+            # Top indications
+            top_n = st.slider("Number of top indications to show", 5, 30, 15, key="drug_indications_slider")
+            top_ind_df = df_indications.head(top_n)
+
+            # Create visualizations
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Bar chart for top indications
+                fig_ind = px.bar(
+                    top_ind_df,
+                    x="Count",
+                    y="Indication",
+                    orientation='h',
+                    title=f"Top {top_n} Medical Conditions Treated with Drugs",
+                    color="Therapeutic Area"
+                )
+                fig_ind.update_layout(yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_ind, use_container_width=True)
+
+            with col2:
+                # Treemap by therapeutic area
+                area_df = df_indications.groupby("Therapeutic Area")["Count"].sum().reset_index()
+                fig_area = px.treemap(
+                    area_df,
+                    path=["Therapeutic Area"],
+                    values="Count",
+                    title="Indications by Therapeutic Area"
+                )
+                st.plotly_chart(fig_area, use_container_width=True)
+
+            # Display detailed statistics in an expander
+            with st.expander("Detailed Indication Statistics", expanded=False):
+                st.dataframe(df_indications.style.highlight_max(subset=["Count"], color='lightgreen'))
+
+            # AI Insights section
+            render_ai_insights_section(df_indications, "Drug Indications", "drug_indications")
+
+    # 3. Patient Demographics Tab
+    with tabs[2]:
+        st.subheader("Patient Demographics")
+
+        # Create two columns for Sex and Weight
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Patient Sex Analysis
+            st.subheader("Patient Sex Distribution")
+            df_sex = get_drug_events_by_patient_sex(
+                st.session_state.start_date,
+                st.session_state.end_date
+            )
+
+            if df_sex.empty:
+                st.warning("No patient sex data available.")
+            else:
+                # Pie chart for sex distribution
+                fig_sex = px.pie(
+                    df_sex,
+                    values="Count",
+                    names="Sex",
+                    title="Adverse Events by Patient Sex",
+                    hover_data=["Percentage"]
+                )
+                st.plotly_chart(fig_sex, use_container_width=True)
+
+                # Table with counts and percentages
+                st.dataframe(df_sex)
+
+        with col2:
+            # Patient Weight Analysis
+            st.subheader("Patient Weight Distribution")
+            df_weight = get_drug_events_by_patient_weight()
+
+            if df_weight.empty:
+                st.warning("No patient weight data available.")
+            else:
+                # Bar chart for weight distribution
+                fig_weight = px.bar(
+                    df_weight,
+                    x="Weight Group",
+                    y="Count",
+                    title="Adverse Events by Patient Weight Group",
+                    color="Weight Group"
+                )
+                st.plotly_chart(fig_weight, use_container_width=True)
+
+                # Table with weight data
                 st.dataframe(df_weight)
-        render_ai_insights_section(df_weight, "Patient Weight", "weight")
+
+    # 4. Manufacturers Tab
+    with tabs[3]:
+        st.subheader("Drug Manufacturers")
+        df_manufacturers = get_drug_manufacturer_distribution(
+            st.session_state.start_date,
+            st.session_state.end_date,
+            st.session_state.sample_size
+        )
+
+        if df_manufacturers.empty:
+            st.warning("No manufacturer data available.")
+        else:
+            # Top manufacturers
+            top_n = st.slider("Number of top manufacturers to show", 5, 30, 15, key="drug_manufacturer_slider")
+            top_mfr_df = df_manufacturers.head(top_n)
+
+            # Create visualizations
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Bar chart for top manufacturers
+                fig_mfr = px.bar(
+                    top_mfr_df,
+                    x="Count",
+                    y="Manufacturer",
+                    orientation='h',
+                    title=f"Top {top_n} Drug Manufacturers",
+                    color="Manufacturer"
+                )
+                fig_mfr.update_layout(
+                    yaxis={'categoryorder':'total ascending'},
+                    showlegend=False
+                )
+                st.plotly_chart(fig_mfr, use_container_width=True)
+
+            with col2:
+                # Pie chart for top manufacturers
+                fig_pie_mfr = px.pie(
+                    top_mfr_df,
+                    values="Count",
+                    names="Manufacturer",
+                    title=f"Market Share of Top {top_n} Manufacturers"
+                )
+                st.plotly_chart(fig_pie_mfr, use_container_width=True)
+
+            # Market concentration metrics
+            total_count = df_manufacturers["Count"].sum()
+            top5_share = (top_mfr_df.head(5)["Count"].sum() / total_count * 100).round(1)
+            top10_share = (top_mfr_df.head(10)["Count"].sum() / total_count * 100).round(1)
+
+            # Show market concentration metrics
+            st.subheader("Market Concentration")
+            metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+            with metrics_col1:
+                st.metric("Number of Manufacturers", len(df_manufacturers))
+            with metrics_col2:
+                st.metric("Top 5 Manufacturers Share", f"{top5_share}%")
+            with metrics_col3:
+                st.metric("Top 10 Manufacturers Share", f"{top10_share}%")
+
+            # Display detailed statistics in an expander
+            with st.expander("Detailed Manufacturer Statistics", expanded=False):
+                st.dataframe(df_manufacturers.style.highlight_max(subset=["Count"], color='lightgreen'))
+
+            # AI Insights section
+            render_ai_insights_section(df_manufacturers, "Drug Manufacturers", "drug_manufacturers")
+
+    # 5. Therapeutic Response Tab
+    with tabs[4]:
+        st.subheader("Therapeutic Response to Drugs")
+        df_response = get_drug_therapeutic_response(
+            st.session_state.start_date,
+            st.session_state.end_date,
+            st.session_state.sample_size
+        )
+
+        if df_response.empty:
+            st.warning("No therapeutic response data available.")
+        else:
+            # Create visualizations
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Bar chart for responses
+                fig_resp = px.bar(
+                    df_response,
+                    x="Count",
+                    y="Response",
+                    orientation='h',
+                    title="Therapeutic Responses to Drugs",
+                    color="Response Category",
+                    color_discrete_map={"Positive": "green", "Negative": "red"}
+                )
+                fig_resp.update_layout(yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_resp, use_container_width=True)
+
+            with col2:
+                # Pie chart for response categories
+                category_df = df_response.groupby("Response Category")["Count"].sum().reset_index()
+                fig_pie_resp = px.pie(
+                    category_df,
+                    values="Count",
+                    names="Response Category",
+                    title="Positive vs. Negative Therapeutic Responses",
+                    color="Response Category",
+                    color_discrete_map={"Positive": "green", "Negative": "red"}
+                )
+                st.plotly_chart(fig_pie_resp, use_container_width=True)
+
+            # Display effectiveness ratio
+            total_count = df_response["Count"].sum()
+            negative_count = df_response[df_response["Response Category"] == "Negative"]["Count"].sum()
+            positive_count = df_response[df_response["Response Category"] == "Positive"]["Count"].sum()
+
+            if positive_count > 0:
+                effectiveness_ratio = (negative_count / positive_count).round(2)
+
+                st.subheader("Effectiveness Analysis")
+                st.write(f"For every 1 report of positive therapeutic effect, there are {effectiveness_ratio} reports of negative effects.")
+
+                # Create a gauge chart for effectiveness score
+                # Scale from 0-10, lower is better (fewer negative reports per positive)
+                effectiveness_score = min(10, effectiveness_ratio)
+
+                fig_gauge = go.Figure(go.Indicator(
+                    mode = "gauge+number",
+                    value = effectiveness_score,
+                    title = {'text': "Ineffectiveness Score"},
+                    gauge = {
+                        'axis': {'range': [0, 10]},
+                        'bar': {'color': "darkgrey"},
+                        'steps': [
+                            {'range': [0, 3], 'color': "green"},
+                            {'range': [3, 7], 'color': "yellow"},
+                            {'range': [7, 10], 'color': "red"}
+                        ],
+                        'threshold': {
+                            'line': {'color': "red", 'width': 4},
+                            'thickness': 0.75,
+                            'value': effectiveness_score
+                        }
+                    }
+                ))
+
+                st.plotly_chart(fig_gauge, use_container_width=True)
+
+            # Display detailed statistics in an expander
+            with st.expander("Detailed Response Statistics", expanded=False):
+                st.dataframe(df_response.style.highlight_max(subset=["Count"], color='lightgreen'))
+
+            # AI Insights section
+            render_ai_insights_section(df_response, "Therapeutic Responses to Drugs", "drug_responses")
+
+    # 6. Substances Tab
+    with tabs[5]:
+        st.subheader("Active Ingredient (Substance)")
+        df_substance = get_drug_events_by_substance()
+
+        if df_substance.empty:
+            st.warning("No data available for active ingredients.")
+        else:
+            top_n = st.slider("Number of top substances to show", 5, 30, 15, key="drug_substance_slider")
+            top_df = df_substance.head(top_n)
+
+            # Create visualizations
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Bar chart for top N
+                fig_bar = px.bar(
+                    top_df,
+                    x="Count",
+                    y="Substance",
+                    title=f"Top {top_n} Active Ingredients",
+                    orientation='h',
+                    color="Substance"
+                )
+                fig_bar.update_layout(
+                    yaxis={'categoryorder':'total ascending'},
+                    showlegend=False
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+            with col2:
+                # Treemap for all results
+                fig_all = px.treemap(
+                    top_df,
+                    path=["Substance"],
+                    values="Count",
+                    title=f"Top {top_n} Active Ingredients (Treemap)"
+                )
+                st.plotly_chart(fig_all, use_container_width=True)
+
+            # Display detailed statistics in an expander
+            with st.expander("Detailed Substance Statistics", expanded=False):
+                st.dataframe(df_substance.style.highlight_max(subset=["Count"], color='lightgreen'))
+
+            # AI Insights section
+            render_ai_insights_section(df_substance, "Active Ingredients (Substances)", "drug_substance")

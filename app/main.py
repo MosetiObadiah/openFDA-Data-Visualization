@@ -12,6 +12,7 @@ from app.food_page import display_food_reports
 from app.drug_page import display_drug_reports
 from app.tobacco_page import display_tobacco_reports
 from app.other_page import display_other_data
+from app.healthcare_trends import display_healthcare_trends
 from src.data_utils import clear_cache
 
 def display_home():
@@ -179,13 +180,14 @@ def main():
     st.title("Data Analysis Dashboard")
 
     # Create tabs for different sections
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "Overview",
         "Drug Reports",
         "Device Reports",
         "Food Reports",
         "Tobacco Reports",
-        "Other Data"
+        "Other Data",
+        "Healthcare Trends"
     ])
 
     with tab1:
@@ -205,6 +207,9 @@ def main():
 
     with tab6:
         display_other_data()
+
+    with tab7:
+        display_healthcare_trends()
 
 if __name__ == "__main__":
     main()

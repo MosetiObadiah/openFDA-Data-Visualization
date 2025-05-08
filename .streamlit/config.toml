@@ -6,7 +6,7 @@ textColor = "#FAFAFA"
 font = "sans serif"
 
 [server]
-port = 8500
+port = 8501
 runOnSave = true
 enableCORS = false
 enableXsrfProtection = false

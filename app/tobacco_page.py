@@ -57,6 +57,13 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
     except Exception as e:
         return f"Error generating insights: {e}"
 
+def render_ai_insights_section(df, context, key_prefix):
+    st.subheader("AI Insights")
+    question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
+    if st.button("Generate Insights", key=f"{key_prefix}_insights"):
+        with st.spinner("Generating insights..."):
+            st.write(get_insights_from_data(df, context, question or ""))
+
 def display_tobacco_reports():
     st.title("Tobacco Reports")
 
@@ -97,18 +104,7 @@ def display_tobacco_reports():
             with st.expander("Detailed Statistics"):
                 st.dataframe(df)
 
-            # AI Insights
-            st.markdown("### AI Insights")
-            if st.button("Get Insights for Tobacco Products", key="tobacco_products_insights"):
-                insights = get_insights_from_data(df, "tobacco products distribution")
-                st.write(insights)
-
-            custom_question = st.text_input("Ask a specific question about tobacco products", key="tobacco_products_question")
-            if custom_question:
-                insights = get_insights_from_data(df, "tobacco products distribution", custom_question)
-                st.write(insights)
-        else:
-            st.warning("No tobacco products data available")
+            render_ai_insights_section(df, "tobacco products distribution", "tobacco_products")
 
     # Tab 2: Health Problems
     with tab2:
@@ -150,18 +146,7 @@ def display_tobacco_reports():
             with st.expander("Detailed Statistics"):
                 st.dataframe(df)
 
-            # AI Insights
-            st.markdown("### AI Insights")
-            if st.button("Get Insights for Health Problems", key="health_problems_insights"):
-                insights = get_insights_from_data(df, "reported health problems")
-                st.write(insights)
-
-            custom_question = st.text_input("Ask a specific question about health problems", key="health_problems_question")
-            if custom_question:
-                insights = get_insights_from_data(df, "reported health problems", custom_question)
-                st.write(insights)
-        else:
-            st.warning("No health problems data available")
+            render_ai_insights_section(df, "reported health problems", "health_problems")
 
     # Tab 3: Health Problems Count
     with tab3:
@@ -202,18 +187,7 @@ def display_tobacco_reports():
             with st.expander("Detailed Statistics"):
                 st.dataframe(df)
 
-            # AI Insights
-            st.markdown("### AI Insights")
-            if st.button("Get Insights for Health Problems Count", key="health_problems_count_insights"):
-                insights = get_insights_from_data(df, "number of health problems per report")
-                st.write(insights)
-
-            custom_question = st.text_input("Ask a specific question about health problems count", key="health_problems_count_question")
-            if custom_question:
-                insights = get_insights_from_data(df, "number of health problems per report", custom_question)
-                st.write(insights)
-        else:
-            st.warning("No health problems count data available")
+            render_ai_insights_section(df, "number of health problems per report", "health_problems_count")
 
     # Tab 4: Product Problems
     with tab4:
@@ -255,15 +229,6 @@ def display_tobacco_reports():
             with st.expander("Detailed Statistics"):
                 st.dataframe(df)
 
-            # AI Insights
-            st.markdown("### AI Insights")
-            if st.button("Get Insights for Product Problems", key="product_problems_insights"):
-                insights = get_insights_from_data(df, "reported product problems")
-                st.write(insights)
-
-            custom_question = st.text_input("Ask a specific question about product problems", key="product_problems_question")
-            if custom_question:
-                insights = get_insights_from_data(df, "reported product problems", custom_question)
-                st.write(insights)
+            render_ai_insights_section(df, "reported product problems", "product_problems")
         else:
             st.warning("No product problems data available")

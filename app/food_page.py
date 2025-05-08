@@ -54,6 +54,13 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
     except Exception as e:
         return f"Error generating insights: {e}"
 
+def render_ai_insights_section(df, context, key_prefix):
+    st.subheader("AI Insights")
+    question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
+    if st.button("Generate Insights", key=f"{key_prefix}_insights"):
+        with st.spinner("Generating insights..."):
+            st.write(get_insights_from_data(df, context, question or ""))
+
 def display_food_reports():
     st.title("Food Reports")
 
@@ -82,14 +89,7 @@ def display_food_reports():
             st.dataframe(df)
 
         # AI Insights
-        st.markdown("### AI Insights")
-        if st.button("Get Insights for Recall Distribution"):
-            insights = get_insights_from_data(df, "food recall distribution by report date")
-            st.write(insights)
+        render_ai_insights_section(df, "food recall distribution by report date", "recall_distribution")
 
-        custom_question = st.text_input("Ask a specific question about recall distribution", key="reason_question")
-        if custom_question:
-            insights = get_insights_from_data(df, "food recall distribution by report date", custom_question)
-            st.write(insights)
     else:
         st.warning("No recall distribution data available")

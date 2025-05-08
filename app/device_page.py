@@ -101,16 +101,7 @@ def display_device_class_distribution():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="device_class_insights"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Device Class")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="device_class_question")
-    if question and st.button("Get Answer", key="device_class_answer"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Device Class", question)
-        st.write(insights)
+    render_ai_insights_section(df, (start_str, end_str), "device_class")
 
 def display_device_problems():
     """Display device problems."""
@@ -157,16 +148,7 @@ def display_device_problems():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="device_problems_insights"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Problem")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="device_problems_question")
-    if question and st.button("Get Answer", key="device_problems_answer"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Problem", question)
-        st.write(insights)
+    render_ai_insights_section(df, (start_str, end_str), "device_problems")
 
 def display_manufacturer_analysis():
     """Display manufacturer analysis."""
@@ -213,16 +195,7 @@ def display_manufacturer_analysis():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="manufacturer_insights"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Manufacturer")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="manufacturer_question")
-    if question and st.button("Get Answer", key="manufacturer_answer"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Manufacturer", question)
-        st.write(insights)
+    render_ai_insights_section(df, (start_str, end_str), "manufacturer")
 
 def display_device_events_by_age():
     """Display device events by age."""
@@ -269,16 +242,7 @@ def display_device_events_by_age():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="device_age_insights"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Age Group")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="device_age_question")
-    if question and st.button("Get Answer", key="device_age_answer"):
-        insights = get_insights_from_data(df, (start_str, end_str), "Age Group", question)
-        st.write(insights)
+    render_ai_insights_section(df, (start_str, end_str), "device_age")
 
 def display_device_reports():
     """Display device reports with various visualizations."""
@@ -352,16 +316,7 @@ def display_advisory_committees():
         st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="advisory_committees_insights"):
-        insights = get_insights_from_data(df, "Advisory Committees")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="advisory_committees_question")
-    if question and st.button("Get Answer", key="advisory_committees_answer"):
-        insights = get_insights_from_data(df, "Advisory Committees", question)
-        st.write(insights)
+    render_ai_insights_section(df, "Advisory Committees", "advisory_committees")
 
 def display_manufacturers():
     """Display manufacturer analysis."""
@@ -411,16 +366,7 @@ def display_manufacturers():
         st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="manufacturers_insights"):
-        insights = get_insights_from_data(df, "Manufacturers")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="manufacturers_question")
-    if question and st.button("Get Answer", key="manufacturers_answer"):
-        insights = get_insights_from_data(df, "Manufacturers", question)
-        st.write(insights)
+    render_ai_insights_section(df, "Manufacturers", "manufacturers")
 
 def display_enforcement_reports():
     """Display enforcement reports over time."""
@@ -469,16 +415,7 @@ def display_enforcement_reports():
         st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="enforcement_reports_insights"):
-        insights = get_insights_from_data(df, "Enforcement Reports")
-        st.write(insights)
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="enforcement_reports_question")
-    if question and st.button("Get Answer", key="enforcement_reports_answer"):
-        insights = get_insights_from_data(df, "Enforcement Reports", question)
-        st.write(insights)
+    render_ai_insights_section(df, "Enforcement Reports", "enforcement_reports")
 
 def display_recall_analysis():
     """Display recall analysis."""
@@ -528,13 +465,11 @@ def display_recall_analysis():
         st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="recall_analysis_insights"):
-        insights = get_insights_from_data(df, "Recall Analysis")
-        st.write(insights)
+    render_ai_insights_section(df, "Recall Analysis", "recall_analysis")
 
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="recall_analysis_question")
-    if question and st.button("Get Answer", key="recall_analysis_answer"):
-        insights = get_insights_from_data(df, "Recall Analysis", question)
-        st.write(insights)
+def render_ai_insights_section(df, context, key_prefix):
+    st.subheader("AI Insights")
+    question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
+    if st.button("Generate Insights", key=f"{key_prefix}_insights"):
+        with st.spinner("Generating insights..."):
+            st.write(get_insights_from_data(df, context, question or ""))

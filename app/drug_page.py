@@ -61,6 +61,13 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
     except Exception as e:
         return f"Error generating insights: {e}"
 
+def render_ai_insights_section(df, context, key_prefix):
+    st.subheader("AI Insights")
+    question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
+    if st.button("Generate Insights", key=f"{key_prefix}_insights"):
+        with st.spinner("Generating insights..."):
+            st.write(get_insights_from_data(df, context, question or ""))
+
 def display_adverse_events_by_age():
     """Display adverse events by age group."""
     st.subheader("Adverse Events by Age Group")
@@ -106,14 +113,7 @@ def display_adverse_events_by_age():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="age_insights"):
-        st.write(get_insights_from_data(df, "Adverse Events by Age Group"))
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="age_question")
-    if question and st.button("Get Answer", key="age_answer"):
-        st.write(get_insights_from_data(df, "Adverse Events by Age Group", question))
+    render_ai_insights_section(df, "Adverse Events by Age Group", "age")
 
 def display_adverse_events_by_drug():
     """Display adverse events by drug."""
@@ -160,14 +160,7 @@ def display_adverse_events_by_drug():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="drug_insights"):
-        st.write(get_insights_from_data(df, "Adverse Events by Drug"))
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="drug_question")
-    if question and st.button("Get Answer", key="drug_answer"):
-        st.write(get_insights_from_data(df, "Adverse Events by Drug", question))
+    render_ai_insights_section(df, "Adverse Events by Drug", "drug")
 
 def display_global_adverse_events():
     """Display global adverse events distribution."""
@@ -214,14 +207,7 @@ def display_global_adverse_events():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="global_insights"):
-        st.write(get_insights_from_data(df, "Global Adverse Events Distribution"))
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="global_question")
-    if question and st.button("Get Answer", key="global_answer"):
-        st.write(get_insights_from_data(df, "Global Adverse Events Distribution", question))
+    render_ai_insights_section(df, "Global Adverse Events Distribution", "global")
 
 def display_actions_taken_with_drug():
     """Display actions taken with drug data."""
@@ -268,14 +254,7 @@ def display_actions_taken_with_drug():
     st.dataframe(df)
 
     # AI Insights section
-    st.subheader("AI Insights")
-    if st.button("Generate Insights", key="actions_insights"):
-        st.write(get_insights_from_data(df, "Actions Taken with Drug"))
-
-    # Custom question input
-    question = st.text_input("Ask a specific question about the data", key="actions_question")
-    if question and st.button("Get Answer", key="actions_answer"):
-        st.write(get_insights_from_data(df, "Actions Taken with Drug", question))
+    render_ai_insights_section(df, "Actions Taken with Drug", "actions")
 
 def display_drug_reports():
     st.title("Drug Reports")
@@ -306,10 +285,7 @@ def display_drug_reports():
             st.plotly_chart(fig_all, use_container_width=True)
             with st.expander("Detailed Statistics", expanded=False):
                 st.dataframe(df)
-            st.subheader("AI Insights")
-            question = st.text_input("Custom question (optional)", key="substance_question")
-            if st.button("Generate Insights", key="substance_insights"):
-                st.write(get_insights_from_data(df, "Active Ingredient (Substance)", question or ""))
+            render_ai_insights_section(df, "Active Ingredient (Substance)", "substance")
 
     # 2. Patient Weight
     with tabs[1]:
@@ -322,9 +298,4 @@ def display_drug_reports():
             st.plotly_chart(fig_weight, use_container_width=True)
             with st.expander("Detailed Weight Statistics", expanded=False):
                 st.dataframe(df_weight)
-        st.subheader("AI Insights")
-        if st.button("Generate Insights", key="weight_insights"):
-            st.write(get_insights_from_data(df_weight, "Patient Weight"))
-        question = st.text_input("Ask a specific question about the data", key="weight_question")
-        if question and st.button("Get Answer", key="weight_answer"):
-            st.write(get_insights_from_data(df_weight, "Patient Weight", question))
+        render_ai_insights_section(df_weight, "Patient Weight", "weight")

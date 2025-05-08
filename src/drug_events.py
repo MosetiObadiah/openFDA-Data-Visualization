@@ -28,7 +28,7 @@ def adverse_events_by_patient_age_group_within_data_range(start_date: str, end_d
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < limit:  # No more results available
+        if len(data["results"]) < nlimit:  # No more results available
             break
 
     if not all_results:
@@ -313,3 +313,150 @@ def adverse_events_by_country() -> pd.DataFrame:
     df["Percentage"] = df["Percentage"].apply(lambda x: f"{x:.2f}%")
 
     return df.head(st.session_state.top_n_results)  # Use global top N results
+
+def get_drug_events_by_substance():
+    """Get drug events by active ingredient (substance name)."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "patient.drug.openfda.substance_name.exact",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Substance", "Count"]
+    return df
+
+def get_drug_events_by_action():
+    """Get drug events by action taken with the drug."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "patient.drug.actiondrug",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Action Code", "Count"]
+
+    # Map action codes to descriptive labels
+    action_map = {
+        "1": "Drug withdrawn",
+        "2": "Dose not changed",
+        "3": "Not applicable",
+        "4": "Dose reduced",
+        "5": "Dose increased",
+        "6": "Dose reduced and withdrawn"
+    }
+    df["Action"] = df["Action Code"].map(action_map)
+    return df[["Action", "Count"]]
+
+def get_drug_events_by_patient_sex():
+    """Get drug events by patient sex."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "patient.patientsex",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Sex Code", "Count"]
+
+    # Map sex codes to labels
+    sex_map = {
+        "1": "Male",
+        "2": "Female",
+        "0": "Unknown"
+    }
+    df["Sex"] = df["Sex Code"].map(sex_map)
+    return df[["Sex", "Count"]]
+
+def get_drug_events_by_patient_weight():
+    """Get drug events by patient weight."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "patient.patientweight",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Weight", "Count"]
+
+    # Convert weight to numeric and create weight groups
+    df["Weight"] = pd.to_numeric(df["Weight"], errors='coerce')
+
+    # Create weight groups (in kg)
+    bins = [0, 30, 50, 70, 90, 110, 130, 150, float('inf')]
+    labels = ['<30', '30-50', '50-70', '70-90', '90-110', '110-130', '130-150', '>150']
+    df["Weight Group"] = pd.cut(df["Weight"], bins=bins, labels=labels)
+
+    # Group by weight group and sum counts
+    weight_groups = df.groupby("Weight Group")["Count"].sum().reset_index()
+    return weight_groups
+
+def get_drug_events_by_reaction_outcome():
+    """Get drug events by reaction outcome."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "patient.reaction.reactionoutcome",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Outcome Code", "Count"]
+
+    # Map outcome codes to labels
+    outcome_map = {
+        "1": "Recovered/Resolved",
+        "2": "Recovering/Resolving",
+        "3": "Not Recovered/Not Resolved",
+        "4": "Recovered/Resolved with Sequelae",
+        "5": "Fatal",
+        "6": "Unknown"
+    }
+    df["Outcome"] = df["Outcome Code"].map(outcome_map)
+    return df[["Outcome", "Count"]]
+
+def get_drug_events_by_reporter_qualification():
+    """Get drug events by reporter qualification."""
+    endpoint = "drug/event.json"
+    params = {
+        "count": "primarysource.qualification",
+        "limit": "100"
+    }
+    data = fetch_api_data(endpoint, params)
+
+    if not data or "results" not in data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data["results"])
+    df.columns = ["Qualification Code", "Count"]
+
+    # Map qualification codes to labels
+    qualification_map = {
+        "1": "Physician",
+        "2": "Pharmacist",
+        "3": "Other Health Professional",
+        "4": "Lawyer",
+        "5": "Consumer or non-health professional"
+    }
+    df["Qualification"] = df["Qualification Code"].map(qualification_map)
+    return df[["Qualification", "Count"]]

@@ -376,3 +376,45 @@ def get_state_abbreviations() -> Dict[str, str]:
         "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
         "WI": "Wisconsin", "WY": "Wyoming"
     }
+
+def get_device_events_by_age():
+    """Get device events grouped by age."""
+    query = """
+    SELECT
+        CASE
+            WHEN patient_age < 18 THEN 'Under 18'
+            WHEN patient_age BETWEEN 18 AND 30 THEN '18-30'
+            WHEN patient_age BETWEEN 31 AND 45 THEN '31-45'
+            WHEN patient_age BETWEEN 46 AND 60 THEN '46-60'
+            WHEN patient_age BETWEEN 61 AND 75 THEN '61-75'
+            ELSE 'Over 75'
+        END as "Age Group",
+        COUNT(*) as "Count"
+    FROM device_events
+    WHERE patient_age IS NOT NULL
+    GROUP BY
+        CASE
+            WHEN patient_age < 18 THEN 'Under 18'
+            WHEN patient_age BETWEEN 18 AND 30 THEN '18-30'
+            WHEN patient_age BETWEEN 31 AND 45 THEN '31-45'
+            WHEN patient_age BETWEEN 46 AND 60 THEN '46-60'
+            WHEN patient_age BETWEEN 61 AND 75 THEN '61-75'
+            ELSE 'Over 75'
+        END
+    ORDER BY
+        CASE "Age Group"
+            WHEN 'Under 18' THEN 1
+            WHEN '18-30' THEN 2
+            WHEN '31-45' THEN 3
+            WHEN '46-60' THEN 4
+            WHEN '61-75' THEN 5
+            ELSE 6
+        END;
+    """
+
+    try:
+        df = pd.read_sql_query(query, get_db_connection())
+        return df
+    except Exception as e:
+        st.error(f"Error fetching device events by age: {e}")
+        return pd.DataFrame()

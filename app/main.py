@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 # Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -12,18 +12,8 @@ from app.food_page import display_food_reports
 from app.drug_page import display_drug_reports
 from app.tobacco_page import display_tobacco_reports
 
-# Initialize session state for global parameters if they don't exist
-if 'sample_size' not in st.session_state:
-    st.session_state.sample_size = 1000
-if 'start_date' not in st.session_state:
-    st.session_state.start_date = '2004-01-01'
-if 'end_date' not in st.session_state:
-    st.session_state.end_date = datetime.now().strftime('%Y-%m-%d')
-if 'top_n_results' not in st.session_state:
-    st.session_state.top_n_results = 20
-
 def display_home():
-    st.title("FDA Data Analysis Dashboard")
+    st.title("openFDA Data Analysis Dashboard")
 
     # Global Controls Section
     st.header("Global Controls")
@@ -40,7 +30,8 @@ def display_home():
             max_value=10000,
             value=st.session_state.sample_size,
             step=100,
-            help="Maximum number of records to fetch for each query"
+            help="Maximum number of records to fetch for each query",
+            key="home_sample_size"
         )
 
         # Top N results slider
@@ -50,29 +41,29 @@ def display_home():
             max_value=50,
             value=st.session_state.top_n_results,
             step=5,
-            help="Number of top results to show in charts and tables"
+            help="Number of top results to show in charts and tables",
+            key="home_top_n_results"
         )
 
     with col2:
         st.subheader("Date Range")
         # Date range picker
-        start_date = st.date_input(
+        st.session_state.start_date = st.date_input(
             "Start Date",
-            value=datetime.strptime(st.session_state.start_date, '%Y-%m-%d'),
-            min_value=datetime(2004, 1, 1),
-            max_value=datetime.now(),
-            help="Start date for data analysis"
+            value=st.session_state.start_date,
+            min_value=date(2020, 1, 1),
+            max_value=date.today(),
+            help="Start date for data analysis",
+            key="home_start_date"
         )
-        st.session_state.start_date = start_date.strftime('%Y-%m-%d')
-
-        end_date = st.date_input(
+        st.session_state.end_date = st.date_input(
             "End Date",
-            value=datetime.strptime(st.session_state.end_date, '%Y-%m-%d'),
-            min_value=datetime(2004, 1, 1),
-            max_value=datetime.now(),
-            help="End date for data analysis"
+            value=st.session_state.end_date,
+            min_value=st.session_state.start_date,
+            max_value=date.today(),
+            help="End date for data analysis",
+            key="home_end_date"
         )
-        st.session_state.end_date = end_date.strftime('%Y-%m-%d')
 
     # Dashboard Description
     st.header("Dashboard Overview")
@@ -96,25 +87,90 @@ def display_home():
     """)
 
 def main():
+    """Main function to run the Streamlit app."""
     st.set_page_config(
         page_title="FDA Data Analysis Dashboard",
         page_icon="🏥",
         layout="wide"
     )
 
-    # Create tabs
+    # Initialize session state variables if they don't exist
+    if "sample_size" not in st.session_state:
+        st.session_state.sample_size = 1000
+    if "top_n_results" not in st.session_state:
+        st.session_state.top_n_results = 10
+    if "start_date" not in st.session_state:
+        st.session_state.start_date = date(2020, 1, 1)
+    if "end_date" not in st.session_state:
+        st.session_state.end_date = date.today()
+
+    # Sidebar for global controls
+    with st.sidebar:
+        st.header("Global Controls")
+
+        # Sample size control
+        st.session_state.sample_size = st.slider(
+            "Maximum Sample Size",
+            min_value=100,
+            max_value=10000,
+            value=st.session_state.sample_size,
+            step=100,
+            help="Maximum number of records to fetch from the database",
+            key="sidebar_sample_size"
+        )
+
+        # Top N results control
+        st.session_state.top_n_results = st.slider(
+            "Top N Results",
+            min_value=5,
+            max_value=50,
+            value=st.session_state.top_n_results,
+            step=5,
+            help="Number of top results to display in charts and tables",
+            key="sidebar_top_n_results"
+        )
+
+        # Date range controls
+        st.session_state.start_date = st.date_input(
+            "Start Date",
+            value=st.session_state.start_date,
+            min_value=date(2020, 1, 1),
+            max_value=date.today(),
+            help="Start date for data analysis",
+            key="sidebar_start_date"
+        )
+
+        st.session_state.end_date = st.date_input(
+            "End Date",
+            value=st.session_state.end_date,
+            min_value=st.session_state.start_date,
+            max_value=date.today(),
+            help="End date for data analysis",
+            key="sidebar_end_date"
+        )
+
+        # Display current settings
+        st.subheader("Current Settings")
+        st.write(f"Sample Size: {st.session_state.sample_size:,} records")
+        st.write(f"Top N Results: {st.session_state.top_n_results}")
+        st.write(f"Date Range: {st.session_state.start_date} to {st.session_state.end_date}")
+
+    # Main content area
+    st.title("openFDA Data Analysis Dashboard")
+
+    # Create tabs for different sections
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Home", "Devices", "Drugs", "Food", "Tobacco"
+        "Overview", "Drug Reports", "Device Reports", "Food Reports", "Tobacco Reports"
     ])
 
     with tab1:
         display_home()
 
     with tab2:
-        display_device_reports()
+        display_drug_reports()
 
     with tab3:
-        display_drug_reports()
+        display_device_reports()
 
     with tab4:
         display_food_reports()

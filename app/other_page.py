@@ -113,8 +113,9 @@ def display_substance_relationship():
         fig_pie.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Show data table
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    # Show data table in collapsed expander
+    with st.expander("View Relationship Data", expanded=False):
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
     # AI Insights section
     render_ai_insights_section(df, "substance relationships", "relationship")
@@ -173,50 +174,6 @@ def display_substance_moiety():
 
     # AI Insights section
     render_ai_insights_section(df, "substance moieties", "moiety")
-
-def display_substance_search():
-    """Display substance search functionality"""
-    st.subheader("Search Substances by Name")
-
-    # Search form
-    search_term = st.text_input("Enter substance name to search", key="substance_search")
-
-    if search_term:
-        with st.spinner(f"Searching for '{search_term}'..."):
-            df = search_substance_by_name(search_term, st.session_state.top_n_results * 2)
-
-        if df.empty:
-            st.warning(f"No substances found matching '{search_term}'.")
-        else:
-            # Display results
-            st.success(f"Found {len(df)} results for '{search_term}'.")
-
-            # Create visualizations if we have enough data
-            if len(df) >= 3:
-                # Create a table visualization
-                st.subheader("Search Results")
-                st.dataframe(df, use_container_width=True, hide_index=True)
-
-                # Only show molecular formula distribution if we have that data
-                if "Molecular Formula" in df.columns and df["Molecular Formula"].notna().any():
-                    # Count occurrences of each formula
-                    formula_counts = df["Molecular Formula"].value_counts().reset_index()
-                    formula_counts.columns = ["Molecular Formula", "Count"]
-
-                    # Only show chart if we have at least 2 different formulas
-                    if len(formula_counts) >= 2:
-                        st.subheader("Molecular Formula Distribution")
-                        fig = px.pie(
-                            formula_counts,
-                            values="Count",
-                            names="Molecular Formula",
-                            title="Distribution of Molecular Formulas",
-                            hole=0.4
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-            else:
-                # Just show the data
-                st.dataframe(df, use_container_width=True, hide_index=True)
 
 def display_nsde_analysis():
     """Display NSDE data analysis"""
@@ -338,71 +295,14 @@ def display_nsde_analysis():
             # AI Insights section
             render_ai_insights_section(df, "NSDE routes of administration", "nsde_route")
 
-def display_nsde_search():
-    """Display NSDE search functionality"""
-    st.subheader("Search NSDE by Ingredient")
-
-    # Search form
-    search_term = st.text_input("Enter ingredient to search", key="nsde_ingredient_search")
-
-    if search_term:
-        with st.spinner(f"Searching for products with '{search_term}'..."):
-            df = search_nsde_by_ingredient(search_term, st.session_state.top_n_results * 2)
-
-        if df.empty:
-            st.warning(f"No products found with ingredient '{search_term}'.")
-        else:
-            # Display results
-            st.success(f"Found {len(df)} products containing '{search_term}'.")
-
-            # Create visualizations if we have enough data
-            if len(df) >= 3:
-                # Group by dosage form and route
-                if "Dosage Form" in df.columns and df["Dosage Form"].notna().any():
-                    dosage_counts = df["Dosage Form"].value_counts().reset_index()
-                    dosage_counts.columns = ["Dosage Form", "Count"]
-
-                    if len(dosage_counts) >= 2:
-                        st.subheader("Distribution by Dosage Form")
-                        fig = px.pie(
-                            dosage_counts,
-                            values="Count",
-                            names="Dosage Form",
-                            title=f"Dosage Forms for Products with '{search_term}'",
-                            hole=0.4
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-
-                if "Route" in df.columns and df["Route"].notna().any():
-                    route_counts = df["Route"].value_counts().reset_index()
-                    route_counts.columns = ["Route", "Count"]
-
-                    if len(route_counts) >= 2:
-                        st.subheader("Distribution by Route")
-                        fig = px.bar(
-                            route_counts,
-                            x="Route",
-                            y="Count",
-                            title=f"Routes of Administration for Products with '{search_term}'",
-                            color="Route"
-                        )
-                        fig.update_layout(xaxis_tickangle=-45)
-                        st.plotly_chart(fig, use_container_width=True)
-
-            # Show full data table
-            st.subheader("Product Details")
-            st.dataframe(df, use_container_width=True, hide_index=True)
-
 def display_other_data():
     """Main function to display the Other Data page"""
     st.title("Other FDA Data Analysis")
 
     # Create tabs for different data categories
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2 = st.tabs([
         "Substance Analysis",
-        "Substance Search",
-        "NSDE Analysis",
-        "NSDE Search"
+        "NSDE Analysis"
     ])
 
     with tab1:
@@ -416,10 +316,4 @@ def display_other_data():
             display_substance_moiety()
 
     with tab2:
-        display_substance_search()
-
-    with tab3:
         display_nsde_analysis()
-
-    with tab4:
-        display_nsde_search()

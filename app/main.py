@@ -15,6 +15,8 @@ from app.other_page import display_other_data
 from src.data_utils import clear_cache
 
 def display_home():
+    st.title("openFDA Data Analysis Dashboard")
+
     # Global Controls Section
     st.header("Global Controls")
 
@@ -66,9 +68,9 @@ def display_home():
         )
 
     # Dashboard Description
-    st.header("Analysis Overview")
+    st.header("Dashboard Overview")
     st.markdown("""
-    This site provides comprehensive analysis of openFDA for:
+    This dashboard provides comprehensive analysis of FDA data across multiple categories:
 
     - **Devices**: Analysis of medical device events, including device class distribution, problems, and manufacturer analysis
     - **Drugs**: Analysis of drug adverse events and safety data
@@ -87,11 +89,6 @@ def display_home():
     - Top Results to Display: {st.session_state.top_n_results}
     - Date Range: {st.session_state.start_date} to {st.session_state.end_date}
     """)
-
-    # Add cache clearing button
-    if st.button("Clear Cache"):
-        clear_cache()
-        st.success("Cache cleared successfully!")
 
 def main():
     """Main function to run the Streamlit app."""
@@ -168,8 +165,15 @@ def main():
 
         # Add app metadata
         st.subheader("About")
-        st.write("Created by Moseti Obadiah")
-        st.write("© 2025")
+        st.write("Created with Streamlit & OpenFDA API")
+        st.write("© 2024")
+
+        # Add clear cache button to the bottom of the sidebar
+        st.subheader("Troubleshooting")
+        if st.button("Clear Cache", key="sidebar_clear_cache"):
+            clear_cache()
+            st.success("Cache cleared successfully!")
+        st.caption("If data is not loading or tables appear broken, try clearing the cache.")
 
     # Main content area
     st.title("Data Analysis Dashboard")

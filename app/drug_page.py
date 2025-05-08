@@ -291,32 +291,28 @@ def display_drug_reports():
             top_n = st.slider("Number of top reactions to show", 5, 30, 15, key="drug_reaction_slider")
             top_df = df_reactions.head(top_n)
 
-            # Create visualizations
-            col1, col2 = st.columns(2)
+            # Create visualizations - bar chart first, then pie chart
+            # Bar chart for top N reactions
+            fig_bar = px.bar(
+                top_df,
+                x="Count",
+                y="Reaction",
+                title=f"Top {top_n} Adverse Reactions",
+                orientation='h',
+                color="Category"
+            )
+            fig_bar.update_layout(yaxis={'categoryorder':'total ascending'})
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-            with col1:
-                # Bar chart for top N reactions
-                fig_bar = px.bar(
-                    top_df,
-                    x="Count",
-                    y="Reaction",
-                    title=f"Top {top_n} Adverse Reactions",
-                    orientation='h',
-                    color="Category"
-                )
-                fig_bar.update_layout(yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_bar, use_container_width=True)
-
-            with col2:
-                # Pie chart for reaction categories
-                category_df = df_reactions.groupby("Category")["Count"].sum().reset_index()
-                fig_pie = px.pie(
-                    category_df,
-                    values="Count",
-                    names="Category",
-                    title="Adverse Reactions by Category"
-                )
-                st.plotly_chart(fig_pie, use_container_width=True)
+            # Pie chart for reaction categories
+            category_df = df_reactions.groupby("Category")["Count"].sum().reset_index()
+            fig_pie = px.pie(
+                category_df,
+                values="Count",
+                names="Category",
+                title="Adverse Reactions by Category"
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
 
             # Display detailed statistics in an expander
             with st.expander("Detailed Reaction Statistics", expanded=False):
@@ -403,8 +399,9 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_sex, use_container_width=True)
 
-                # Table with counts and percentages
-                st.dataframe(df_sex)
+                # Table with counts and percentages (in an expander)
+                with st.expander("View Sex Distribution Details", expanded=False):
+                    st.dataframe(df_sex)
 
         with col2:
             # Patient Weight Analysis
@@ -424,8 +421,27 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_weight, use_container_width=True)
 
-                # Table with weight data
-                st.dataframe(df_weight)
+                # Table with weight data (in an expander)
+                with st.expander("View Weight Distribution Details", expanded=False):
+                    st.dataframe(df_weight)
+
+        # Add combined demographic data for AI insights
+        if not df_sex.empty or not df_weight.empty:
+            # Combine data for insights or use just one dataset if the other is empty
+            demographics_data = pd.DataFrame()
+            if not df_sex.empty and not df_weight.empty:
+                # Create a simple combined dataset for insights
+                demographics_data = {
+                    "sex_distribution": df_sex,
+                    "weight_distribution": df_weight
+                }
+            elif not df_sex.empty:
+                demographics_data = df_sex
+            else:
+                demographics_data = df_weight
+
+            # Add AI Insights section
+            render_ai_insights_section(demographics_data, "Patient Demographics in Drug Events", "drug_demographics")
 
     # 4. Manufacturers Tab
     with tabs[3]:

@@ -365,8 +365,9 @@ def display_demographic_analysis():
             else:
                 filtered_age_df = age_df
 
-            # Show the filtered data
-            st.dataframe(filtered_age_df, use_container_width=True, hide_index=True)
+            # Show the filtered data in a collapsed expander
+            with st.expander("View Age Distribution Data", expanded=False):
+                st.dataframe(filtered_age_df, use_container_width=True, hide_index=True)
 
             # AI Insights for age
             render_ai_insights_section(age_df, "age distribution in tobacco reports", "age")

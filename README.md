@@ -7,7 +7,7 @@ This dashboard application provides interactive visualizations and AI-powered in
 ### Development Process
 
 1. **Initial Implementation**:
-   - Created a comprehensive data infrastructure with caching and multithreading
+   - Created a comprehensive data fetching pipeline
    - Developed dedicated API modules for Drug, Food, Tobacco, Device, and other endpoints
    - Built interactive UI with visualizations and local filtering capabilities
 
@@ -15,11 +15,6 @@ This dashboard application provides interactive visualizations and AI-powered in
    - Implemented Gemini AI-powered trend analysis for healthcare data
    - Added predictive analytics for drug safety, food safety, and tobacco health effects
    - Enabled natural language querying of FDA data patterns
-
-3. **Refinement**:
-   - Resolved component duplication issues across pages
-   - Streamlined codebase by removing unused modules
-   - Optimized data loading with concurrent processing
 
 ### Key Findings
 
@@ -38,7 +33,7 @@ This dashboard application provides interactive visualizations and AI-powered in
 ## Installation and Usage
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.11+
 - Git
 
 ### Installation
@@ -47,11 +42,11 @@ This dashboard application provides interactive visualizations and AI-powered in
    git clone https://github.com/MosetiObadiah/openFDA-Data-Visualization.git
    cd openFDA-Data-Visualization
    ```
-
 2. Create and activate a virtual environment:
    ```
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   On Linux: source venv/bin/activate
+   On Windows: venv\Scripts\activate
    ```
 
 3. Install dependencies:
@@ -83,3 +78,6 @@ This dashboard application provides interactive visualizations and AI-powered in
 - **AI Insights**: Get AI-powered analysis of healthcare trends
 - **Predictive Analytics**: Ask questions about future trends based on FDA data patterns
 - **Multi-domain Analysis**: Explore drug, food, tobacco, and device safety data
+
+### Screenshot
+![Dashboard Screenshot](/images/Screenshot%20From%202025-05-09%2013-48-33.png)

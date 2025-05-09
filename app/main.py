@@ -137,7 +137,7 @@ def main():
         st.session_state.start_date = st.date_input(
             "Start Date",
             value=st.session_state.start_date,
-            min_value=date(2018, 1, 1),
+            min_value=date(2020, 1, 1),
             max_value=date.today(),
             help="Start date for data analysis",
             key="sidebar_start_date"

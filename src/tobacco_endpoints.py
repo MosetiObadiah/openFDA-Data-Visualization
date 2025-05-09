@@ -1,29 +1,21 @@
 import pandas as pd
 import streamlit as st
 from datetime import datetime
-from typing import Optional, Dict, List, Any
 
 from src.data_utils import (
-    fetch_with_cache,
     get_count_data,
-    fetch_all_pages,
-    search_records,
     format_date_range
 )
 
-# Base endpoint for tobacco data
-# Using drug endpoints since tobacco endpoint is not working
 DRUG_LABEL_ENDPOINT = "drug/label.json"
 DRUG_EVENT_ENDPOINT = "drug/event.json"
 
 @st.cache_data(ttl=3600)
 def get_tobacco_reports_by_product(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get tobacco-related products using drug labels"""
     search_params = {
         "search": "openfda.product_type:\"OTC\" AND (openfda.brand_name:\"Nicotine\" OR openfda.brand_name:\"NicoDerm\" OR openfda.brand_name:\"Nicorette\" OR openfda.substance_name:\"NICOTINE\")"
     }
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] += f" AND effective_time:{date_range}"
@@ -35,7 +27,7 @@ def get_tobacco_reports_by_product(start_date=None, end_date=None, limit: int = 
         limit
     )
 
-    # Group similar product types - Define the categorize_product function outside if/else blocks
+    # Group similar product types
     product_categories = {
         "E-Cigarette/Vape": ["Electronic", "E-Cigarette", "E-Liquid", "Vape", "Vaping"],
         "Cigarette": ["Cigarette", "Cig"],
@@ -69,13 +61,12 @@ def get_tobacco_reports_by_product(start_date=None, end_date=None, limit: int = 
 
         return {"detailed": df, "categorized": category_df}
     else:
-        # Create synthetic data
         product_types = ["Nicotine Patch", "Nicotine Gum", "Nicotine Lozenge", "Nicotine Inhaler",
                         "Nicotine Spray", "Electronic Cigarette", "Tobacco Cigarette", "Cigar",
                         "Smokeless Tobacco", "Pipe Tobacco"]
 
         import random
-        random.seed(42)  # For reproducibility
+        random.seed(42)
         counts = [random.randint(50, 500) for _ in range(len(product_types))]
 
         df = pd.DataFrame({
@@ -83,22 +74,18 @@ def get_tobacco_reports_by_product(start_date=None, end_date=None, limit: int = 
             "Count": counts
         })
 
-        # Create categories
         df["Product Category"] = df["Product Type"].apply(categorize_product)
 
-        # Create a category summary
         category_df = df.groupby("Product Category")["Count"].sum().reset_index()
 
         return {"detailed": df, "categorized": category_df}
 
 @st.cache_data(ttl=3600)
 def get_tobacco_reports_by_problem_type(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get tobacco-related problem types using adverse event reports"""
     search_params = {
         "search": "(patient.drug.openfda.brand_name:\"Nicotine\" OR patient.drug.openfda.brand_name:\"NicoDerm\" OR patient.drug.openfda.substance_name:\"NICOTINE\")"
     }
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] += f" AND receivedate:{date_range}"
@@ -110,7 +97,6 @@ def get_tobacco_reports_by_problem_type(start_date=None, end_date=None, limit: i
         limit
     )
 
-    # Categorize problem types - Define function outside if/else blocks
     problem_categories = {
         "Health Effect": ["Health", "Illness", "Symptom", "Disease", "Condition", "Reaction", "Pain", "Ache", "Nausea", "Vomiting", "Headache", "Dizziness"],
         "Product Quality": ["Quality", "Performance", "Malfunction", "Defect", "Leak", "Break"],
@@ -134,23 +120,20 @@ def get_tobacco_reports_by_problem_type(start_date=None, end_date=None, limit: i
     if not df.empty:
         df.columns = ["Problem Type", "Count"]
 
-        # Standardize problem types
         df["Problem Type"] = df["Problem Type"].str.title()
 
         df["Problem Category"] = df["Problem Type"].apply(categorize_problem)
 
-        # Create a category summary
         category_df = df.groupby("Problem Category")["Count"].sum().reset_index()
 
         return {"detailed": df, "categorized": category_df}
     else:
-        # Create synthetic data
         problem_types = ["Skin Irritation", "Nausea", "Headache", "Dizziness", "Insomnia",
                         "Heart Palpitations", "Mouth Irritation", "Anxiety", "Coughing",
                         "Withdrawal Symptoms", "Chest Pain", "Product Defect", "Addiction"]
 
         import random
-        random.seed(42)  # For reproducibility
+        random.seed(42)
         counts = [random.randint(10, 200) for _ in range(len(problem_types))]
 
         df = pd.DataFrame({
@@ -158,22 +141,18 @@ def get_tobacco_reports_by_problem_type(start_date=None, end_date=None, limit: i
             "Count": counts
         })
 
-        # Create categories
         df["Problem Category"] = df["Problem Type"].apply(categorize_problem)
 
-        # Create a category summary
         category_df = df.groupby("Problem Category")["Count"].sum().reset_index()
 
         return {"detailed": df, "categorized": category_df}
 
 @st.cache_data(ttl=3600)
 def get_tobacco_reports_by_health_effect(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get tobacco-related health effects from adverse events"""
     search_params = {
         "search": "(patient.drug.openfda.brand_name:\"Nicotine\" OR patient.drug.openfda.brand_name:\"NicoDerm\" OR patient.drug.openfda.substance_name:\"NICOTINE\")"
     }
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] += f" AND receivedate:{date_range}"
@@ -185,7 +164,6 @@ def get_tobacco_reports_by_health_effect(start_date=None, end_date=None, limit: 
         limit
     )
 
-    # Categorize health effects - Define function outside if/else blocks
     health_categories = {
         "Respiratory": ["Breathing", "Cough", "Lung", "Asthma", "Respiratory", "Breath", "Shortness"],
         "Cardiovascular": ["Heart", "Chest Pain", "Palpitation", "Blood Pressure", "Cardiovascular"],
@@ -210,23 +188,20 @@ def get_tobacco_reports_by_health_effect(start_date=None, end_date=None, limit: 
     if not df.empty:
         df.columns = ["Health Effect", "Count"]
 
-        # Standardize health effect descriptions
         df["Health Effect"] = df["Health Effect"].str.title()
 
         df["Effect Category"] = df["Health Effect"].apply(categorize_health_effect)
 
-        # Create a category summary
         category_df = df.groupby("Effect Category")["Count"].sum().reset_index()
 
         return {"detailed": df, "categorized": category_df}
     else:
-        # Create synthetic data
         health_effects = ["Coughing", "Shortness of Breath", "Headache", "Nausea", "Skin Rash",
                         "Heart Palpitations", "Dizziness", "Insomnia", "Anxiety", "Irritability",
                         "Mouth Sores", "Withdrawal Symptoms", "Increased Blood Pressure", "Allergic Reaction"]
 
         import random
-        random.seed(42)  # For reproducibility
+        random.seed(42)
         counts = [random.randint(5, 150) for _ in range(len(health_effects))]
 
         df = pd.DataFrame({
@@ -234,22 +209,18 @@ def get_tobacco_reports_by_health_effect(start_date=None, end_date=None, limit: 
             "Count": counts
         })
 
-        # Create categories
         df["Effect Category"] = df["Health Effect"].apply(categorize_health_effect)
 
-        # Create a category summary
         category_df = df.groupby("Effect Category")["Count"].sum().reset_index()
 
         return {"detailed": df, "categorized": category_df}
 
 @st.cache_data(ttl=3600)
 def get_tobacco_reports_by_demographic(demographic: str = "age", start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get tobacco-related reports by demographic (age, gender)"""
     search_params = {
         "search": "(patient.drug.openfda.brand_name:\"Nicotine\" OR patient.drug.openfda.brand_name:\"NicoDerm\" OR patient.drug.openfda.substance_name:\"NICOTINE\")"
     }
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] += f" AND receivedate:{date_range}"
@@ -298,13 +269,11 @@ def get_tobacco_reports_by_demographic(demographic: str = "age", start_date=None
             bins = [0, 18, 25, 35, 45, 55, 65, float('inf')]
             labels = ['Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
 
-            # Only apply binning if we have numeric data
             if not df[column_name].isna().all():
                 df = df.dropna(subset=[column_name])
                 df["Age Group"] = pd.cut(df[column_name], bins=bins, labels=labels)
                 df = df.groupby("Age Group")["Count"].sum().reset_index()
             else:
-                # Create synthetic age data
                 df = pd.DataFrame({
                     "Age Group": labels,
                     "Count": [random.randint(5, 100) for _ in range(len(labels))]
@@ -312,21 +281,20 @@ def get_tobacco_reports_by_demographic(demographic: str = "age", start_date=None
 
         return df
     else:
-        # Create synthetic data
         if demographic == "gender":
             gender_values = ["Male", "Female", "Unknown"]
             import random
-            random.seed(42)  # For reproducibility
+            random.seed(42)
             counts = [random.randint(50, 200) for _ in range(len(gender_values))]
 
             df = pd.DataFrame({
                 column_name: gender_values,
                 "Count": counts
             })
-        else:  # age
+        else:
             age_groups = ['Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
             import random
-            random.seed(42)  # For reproducibility
+            random.seed(42)
             counts = [random.randint(5, 200) for _ in range(len(age_groups))]
 
             df = pd.DataFrame({
@@ -338,17 +306,14 @@ def get_tobacco_reports_by_demographic(demographic: str = "age", start_date=None
 
 @st.cache_data(ttl=3600)
 def get_tobacco_reports_over_time(interval: str = "month", start_date=None, end_date=None) -> pd.DataFrame:
-    """Get tobacco-related reports over time periods"""
     search_params = {
         "search": "(patient.drug.openfda.brand_name:\"Nicotine\" OR patient.drug.openfda.brand_name:\"NicoDerm\" OR patient.drug.openfda.substance_name:\"NICOTINE\")"
     }
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] += f" AND receivedate:{date_range}"
 
-    # Choose the right time field based on interval
     time_field = "receivedate"
     if interval == "year":
         count_field = f"{time_field}.year"
@@ -363,13 +328,13 @@ def get_tobacco_reports_over_time(interval: str = "month", start_date=None, end_
         DRUG_EVENT_ENDPOINT,
         count_field,
         search_params,
-        limit=100  # Get all available time periods
+        limit=100
     )
 
     if not df.empty:
         df.columns = ["Time Period", "Count"]
 
-        # Format time period for readability
+        # Format time perio
         if interval == "month":
             month_names = {
                 "1": "January", "2": "February", "3": "March", "4": "April",
@@ -385,7 +350,6 @@ def get_tobacco_reports_over_time(interval: str = "month", start_date=None, end_
 
         return df
     else:
-        # Create synthetic time data
         if interval == "month":
             time_periods = ["January", "February", "March", "April", "May", "June",
                             "July", "August", "September", "October", "November", "December"]
@@ -396,11 +360,10 @@ def get_tobacco_reports_over_time(interval: str = "month", start_date=None, end_
             time_periods = [str(year) for year in range(current_year-4, current_year+1)]
 
         import random
-        random.seed(42)  # For reproducibility
+        random.seed(42)
 
-        # Create a trend with some randomness
         base_count = 100
-        trend_factor = 1.1  # Increasing trend
+        trend_factor = 1.1
         counts = []
 
         for i in range(len(time_periods)):

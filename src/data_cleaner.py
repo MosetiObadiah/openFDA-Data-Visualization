@@ -25,7 +25,7 @@ def clean_recall_drug_data(data: dict) -> pd.DataFrame:
     df.columns = ["Product Description", "Recall Count"]
     df = df.dropna(subset=["Product Description", "Recall Count"])
     df["Recall Count"] = pd.to_numeric(df["Recall Count"], errors="coerce").fillna(0).astype(int)
-    # Basic cleaning: remove duplicates and limit to top 20
+    # Basic cleaning to remove duplicates and limit to top 20
     df = df.drop_duplicates(subset=["Product Description"]).head(20)
     return df
 

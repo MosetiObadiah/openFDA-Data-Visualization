@@ -1,27 +1,23 @@
 from src.data_loader import fetch_api_data
 from src.data_cleaner import (
     clean_age_data,
-    clean_recall_frequency_data,
     clean_recall_drug_data,
     clean_recall_reason_data
 )
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from typing import Tuple, Optional, Dict, List, Any
-import json
 import random
 
-from src.data_utils import fetch_with_cache, get_count_data
+from src.data_utils import fetch_with_cache
 
 @st.cache_data
 def adverse_events_by_patient_age_group_within_data_range(start_date: str, end_date: str) -> pd.DataFrame:
-    """Fetch and process adverse events data by patient age group."""
     all_results = []
     skip = 0
-    limit = 100  # Maximum allowed per request
+    limit = 100
 
-    while len(all_results) < st.session_state.sample_size:  # Use global sample size
+    while len(all_results) < st.session_state.sample_size:
         url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.patientonsetage&limit={limit}&skip={skip}"
         data = fetch_api_data(url, "Patient Age")
 
@@ -31,7 +27,7 @@ def adverse_events_by_patient_age_group_within_data_range(start_date: str, end_d
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < nlimit:  # No more results available
+        if len(data["results"]) < nlimit:
             break
 
     if not all_results:
@@ -42,7 +38,6 @@ def adverse_events_by_patient_age_group_within_data_range(start_date: str, end_d
 
 @st.cache_data
 def get_aggregated_age_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate age data for visualization."""
     if df.empty:
         return df
     df = df.groupby("Patient Age", as_index=False).agg({"Adverse Event Count": "sum"})
@@ -50,12 +45,11 @@ def get_aggregated_age_data(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data
 def adverse_events_by_drug_within_data_range(start_date: str, end_date: str, sample_size: int = 50) -> pd.DataFrame:
-    """Fetch and process adverse events data by drug."""
     all_results = []
     skip = 0
-    limit = 100  # Maximum allowed per request
+    limit = 100
 
-    while len(all_results) < sample_size:  # Use provided sample size
+    while len(all_results) < sample_size:
         url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{start_date}+TO+{end_date}]&count=patient.drug.medicinalproduct.exact&limit={limit}&skip={skip}"
         data = fetch_api_data(url, "Drug Name")
 
@@ -65,7 +59,7 @@ def adverse_events_by_drug_within_data_range(start_date: str, end_date: str, sam
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < limit:  # No more results available
+        if len(data["results"]) < limit:
             break
 
     if not all_results:
@@ -91,17 +85,15 @@ def adverse_events_by_drug_within_data_range(start_date: str, end_date: str, sam
 
 @st.cache_data
 def get_top_drugs(df: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
-    """Get top drugs by adverse event count."""
     if df.empty:
         return df
     return df.sort_values("Adverse Event Count", ascending=False).head(limit)
 
 @st.cache_data
 def recall_frequency_by_year() -> pd.DataFrame:
-    """Fetch and process recall frequency data by year."""
     all_results = []
     skip = 0
-    limit = 100  # Maximum allowed per request
+    limit = 100
 
     while True:  # Continue until no more results
         url = f"https://api.fda.gov/drug/enforcement.json?count=recall_initiation_date.year&limit={limit}&skip={skip}"
@@ -113,7 +105,7 @@ def recall_frequency_by_year() -> pd.DataFrame:
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < limit:  # No more results available
+        if len(data["results"]) < limit:
             break
 
     if not all_results:
@@ -128,7 +120,7 @@ def recall_frequency_by_year() -> pd.DataFrame:
     df["Recall Count"] = pd.to_numeric(df["Recall Count"], errors="coerce").fillna(0).astype(int)
     df = df.sort_values("Year")
 
-    # Create a pivot table for heatmap
+    # pivot table for heatmap
     df_pivot = df.pivot_table(
         index=df["Year"].dt.year,
         columns=df["Year"].dt.month,
@@ -141,10 +133,9 @@ def recall_frequency_by_year() -> pd.DataFrame:
 
 @st.cache_data
 def most_common_recalled_drugs(limit=50) -> pd.DataFrame:
-    """Fetch and process most common recalled drugs data."""
     all_results = []
     skip = 0
-    api_limit = 100  # Maximum allowed per request
+    api_limit = 100
 
     while len(all_results) < limit:  # Use provided limit
         url = f"https://api.fda.gov/drug/enforcement.json?count=product_description.exact&limit={api_limit}&skip={skip}"
@@ -156,7 +147,7 @@ def most_common_recalled_drugs(limit=50) -> pd.DataFrame:
         all_results.extend(data["results"])
         skip += api_limit
 
-        if len(data["results"]) < api_limit:  # No more results available
+        if len(data["results"]) < api_limit:
             break
 
     if not all_results:
@@ -169,7 +160,6 @@ def most_common_recalled_drugs(limit=50) -> pd.DataFrame:
 
 @st.cache_data
 def recall_reasons_over_time(start_year: int = 2004, end_year: int = 2025) -> pd.DataFrame:
-    """Fetch and process recall reasons data over time."""
     all_data = []
     current_year = datetime.now().year
     end_year = min(end_year, current_year)  # Don't query future years
@@ -194,7 +184,6 @@ def recall_reasons_over_time(start_year: int = 2004, end_year: int = 2025) -> pd
 
 @st.cache_data
 def get_recall_reasons_pivot(df: pd.DataFrame) -> pd.DataFrame:
-    """Create a pivot table for recall reasons over time."""
     if df.empty:
         return pd.DataFrame(columns=["Year"])
     df_pivot = df.pivot_table(
@@ -208,12 +197,11 @@ def get_recall_reasons_pivot(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data
 def get_actions_taken_with_drug(sample_size=50) -> pd.DataFrame:
-    """Fetch and process actions taken with drug data."""
     all_results = []
     skip = 0
-    limit = 100  # Maximum allowed per request
+    limit = 100
 
-    while len(all_results) < sample_size:  # Use provided sample size
+    while len(all_results) < sample_size:
         url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{st.session_state.start_date}+TO+{st.session_state.end_date}]&count=patient.drug.actiondrug&limit={limit}&skip={skip}"
         data = fetch_api_data(url, "Actions Taken with Drug")
 
@@ -223,14 +211,13 @@ def get_actions_taken_with_drug(sample_size=50) -> pd.DataFrame:
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < limit:  # No more results available
+        if len(data["results"]) < limit:
             break
 
     if not all_results:
         print("No data returned for actions taken with drug")
         return pd.DataFrame(columns=["Action", "count"])
 
-    # Create DataFrame from results
     df = pd.DataFrame(all_results)
 
     # Map numerical terms to descriptive labels
@@ -267,12 +254,11 @@ def get_actions_taken_with_drug(sample_size=50) -> pd.DataFrame:
 
 @st.cache_data
 def adverse_events_by_country(sample_size=50) -> pd.DataFrame:
-    """Fetch and process adverse events data by country."""
     all_results = []
     skip = 0
-    limit = 100  # Maximum allowed per request
+    limit = 100
 
-    while len(all_results) < sample_size:  # Use provided sample size
+    while len(all_results) < sample_size:
         url = f"https://api.fda.gov/drug/event.json?search=receivedate:[{st.session_state.start_date}+TO+{st.session_state.end_date}]&count=occurcountry.exact&limit={limit}&skip={skip}"
         data = fetch_api_data(url, "Adverse Events by Country")
 
@@ -282,7 +268,7 @@ def adverse_events_by_country(sample_size=50) -> pd.DataFrame:
         all_results.extend(data["results"])
         skip += limit
 
-        if len(data["results"]) < limit:  # No more results available
+        if len(data["results"]) < limit:
             break
 
     if not all_results:
@@ -333,7 +319,6 @@ def adverse_events_by_country(sample_size=50) -> pd.DataFrame:
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_substance():
-    """Get drug events by active ingredient (substance name)."""
     endpoint = "drug/event.json"
     params = {
         "count": "patient.drug.openfda.substance_name.exact",
@@ -350,7 +335,6 @@ def get_drug_events_by_substance():
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_action():
-    """Get drug events by action taken with the drug."""
     endpoint = "drug/event.json"
     params = {
         "count": "patient.drug.actiondrug",
@@ -378,10 +362,6 @@ def get_drug_events_by_action():
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_patient_sex(start_date=None, end_date=None) -> pd.DataFrame:
-    """Get drug adverse events by patient sex, with improved error handling.
-
-    This uses the patient.patientsex field which reliably returns data.
-    """
     search_params = {}
 
     # Add date range if provided
@@ -395,7 +375,7 @@ def get_drug_events_by_patient_sex(start_date=None, end_date=None) -> pd.DataFra
     )
 
     if "error" in data or "results" not in data or not data["results"]:
-        # Create synthetic data if API fails
+
         sexes = [
             {"code": "1", "label": "Male", "count": 6630396},
             {"code": "2", "label": "Female", "count": 10081573},
@@ -429,7 +409,6 @@ def get_drug_events_by_patient_sex(start_date=None, end_date=None) -> pd.DataFra
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_patient_weight():
-    """Get drug events by patient weight."""
     endpoint = "drug/event.json"
     params = {
         "count": "patient.patientweight",
@@ -438,7 +417,6 @@ def get_drug_events_by_patient_weight():
     data = fetch_api_data(endpoint, params)
 
     if not data or "results" not in data:
-        # Return an empty DataFrame with the correct columns to avoid axis length mismatch error
         return pd.DataFrame(columns=["Weight", "Count", "Weight Group"])
 
     df = pd.DataFrame(data["results"])
@@ -458,7 +436,6 @@ def get_drug_events_by_patient_weight():
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_reaction_outcome():
-    """Get drug events by reaction outcome."""
     endpoint = "drug/event.json"
     params = {
         "count": "patient.reaction.reactionoutcome",
@@ -486,7 +463,6 @@ def get_drug_events_by_reaction_outcome():
 
 @st.cache_data(ttl=3600)
 def get_drug_events_by_reporter_qualification():
-    """Get drug events by reporter qualification."""
     endpoint = "drug/event.json"
     params = {
         "count": "primarysource.qualification",
@@ -513,10 +489,6 @@ def get_drug_events_by_reporter_qualification():
 
 @st.cache_data(ttl=3600)
 def get_top_drug_reactions(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get the most common adverse reactions reported for drugs.
-
-    This uses the robust patient.reaction.reactionmeddrapt.exact field to count reactions.
-    """
     search_params = {}
 
     # Add date range if provided
@@ -530,12 +502,11 @@ def get_top_drug_reactions(start_date=None, end_date=None, limit: int = 100) -> 
     )
 
     if "error" in data or "results" not in data or not data["results"]:
-        # Create synthetic data if API fails
+
         reactions = ["DRUG INEFFECTIVE", "NAUSEA", "HEADACHE", "FATIGUE", "DIZZINESS",
                     "DIARRHOEA", "VOMITING", "PAIN", "DYSPNOEA", "ANXIETY",
                     "DEATH", "RASH", "INSOMNIA", "DEPRESSION", "PRURITUS"]
 
-        # Generate random counts with a realistic distribution (decreasing)
         counts = [int(random.randint(5000, 10000) * (0.9 ** i)) for i in range(len(reactions))]
 
         df = pd.DataFrame({
@@ -577,10 +548,6 @@ def get_top_drug_reactions(start_date=None, end_date=None, limit: int = 100) -> 
 
 @st.cache_data(ttl=3600)
 def get_drug_indications(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get the most common indications (medical conditions) for which drugs are used.
-
-    This uses the robust patient.drug.drugindication.exact field.
-    """
     search_params = {}
 
     # Add date range if provided
@@ -594,13 +561,12 @@ def get_drug_indications(start_date=None, end_date=None, limit: int = 100) -> pd
     )
 
     if "error" in data or "results" not in data or not data["results"]:
-        # Create synthetic data if API fails
+
         indications = ["HYPERTENSION", "RHEUMATOID ARTHRITIS", "DIABETES MELLITUS",
                      "DEPRESSION", "PAIN", "MULTIPLE SCLEROSIS", "ANXIETY",
                      "ASTHMA", "INSOMNIA", "EPILEPSY", "CROHN'S DISEASE",
                      "PSORIASIS", "SCHIZOPHRENIA", "MIGRAINE", "OSTEOPOROSIS"]
 
-        # Generate random counts with a realistic distribution (decreasing)
         counts = [int(random.randint(3000, 8000) * (0.85 ** i)) for i in range(len(indications))]
 
         df = pd.DataFrame({
@@ -646,10 +612,6 @@ def get_drug_indications(start_date=None, end_date=None, limit: int = 100) -> pd
 
 @st.cache_data(ttl=3600)
 def get_drug_manufacturer_distribution(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get distribution of drugs by manufacturer from drug event reports.
-
-    This analyzes the company information in adverse event reports.
-    """
     search_params = {}
 
     # Add date range if provided
@@ -657,7 +619,7 @@ def get_drug_manufacturer_distribution(start_date=None, end_date=None, limit: in
         date_range = f"[{start_date.strftime('%Y%m%d')}+TO+{end_date.strftime('%Y%m%d')}]"
         search_params["search"] = f"receivedate:{date_range}"
 
-    # Try to get manufacturer data from openFDA label data field first
+    # get manufacturer data from openFDA label data field first
     data = fetch_with_cache(
         "drug/event.json",
         {**search_params, "count": "patient.drug.openfda.manufacturer_name.exact", "limit": str(limit)}
@@ -671,12 +633,10 @@ def get_drug_manufacturer_distribution(start_date=None, end_date=None, limit: in
         )
 
     if "error" in data or "results" not in data or not data["results"]:
-        # Create synthetic data if both API calls fail
         manufacturers = ["Pfizer", "Novartis", "Johnson & Johnson", "Roche", "Merck",
                         "AstraZeneca", "GlaxoSmithKline", "Sanofi", "AbbVie", "Amgen",
                         "Bristol-Myers Squibb", "Eli Lilly", "Gilead Sciences", "Bayer", "Takeda"]
 
-        # Generate random counts with a realistic distribution
         counts = [int(random.randint(5000, 15000) * (0.9 ** i)) for i in range(len(manufacturers))]
 
         df = pd.DataFrame({
@@ -715,10 +675,6 @@ def get_drug_manufacturer_distribution(start_date=None, end_date=None, limit: in
 
 @st.cache_data(ttl=3600)
 def get_drug_therapeutic_response(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Analyze therapeutic responses to drugs from adverse event reports.
-
-    This looks for terms like "drug effective", "drug ineffective", or specific outcome terms.
-    """
     # Search for therapeutic response-related terms
     response_terms = ["DRUG EFFECTIVE", "DRUG INEFFECTIVE", "THERAPEUTIC RESPONSE DECREASED",
                      "THERAPEUTIC RESPONSE INCREASED", "THERAPEUTIC PRODUCT EFFECT DECREASED",
@@ -740,7 +696,7 @@ def get_drug_therapeutic_response(start_date=None, end_date=None, limit: int = 1
     data = fetch_with_cache("drug/event.json", search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
-        # Create synthetic data if API fails
+
         responses = [
             "DRUG INEFFECTIVE",
             "THERAPEUTIC RESPONSE DECREASED",
@@ -749,7 +705,6 @@ def get_drug_therapeutic_response(start_date=None, end_date=None, limit: int = 1
             "THERAPEUTIC RESPONSE INCREASED"
         ]
 
-        # Generate random counts with a realistic distribution (ineffective more common in reports)
         counts = [8500, 3200, 1800, 1200, 800]
 
         df = pd.DataFrame({

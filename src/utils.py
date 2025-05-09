@@ -1,5 +1,4 @@
 def get_state_abbreviations():
-    """Return a dictionary mapping state names to their abbreviations."""
     return {
         'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
         'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',

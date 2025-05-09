@@ -1,32 +1,21 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import sys
 import os
-from datetime import datetime, date
-import seaborn as sns
 from scipy import stats
 
-# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Import necessary functions from other modules
 from src.drug_events import (
     get_top_drug_reactions,
     get_drug_events_by_patient_sex,
     get_drug_events_by_patient_weight,
     adverse_events_by_patient_age_group_within_data_range,
-    get_drug_therapeutic_response,
-    get_drug_manufacturer_distribution,
-    get_drug_indications
+    get_drug_manufacturer_distribution
 )
 from src.food_endpoints import (
     get_food_recalls_by_classification,
-    get_food_recalls_by_reason,
-    get_food_events_by_product,
     get_food_events_by_symptom
 )
 from src.tobacco_endpoints import (
@@ -42,8 +31,6 @@ from src.device_endpoints import (
 
 @st.cache_data(ttl=3600)
 def get_cross_category_recalls():
-    """Get recall data across drug, food, and device categories for comparison."""
-    # Get recall data from different categories
     drug_recalls = get_drug_manufacturer_distribution(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -63,7 +50,7 @@ def get_cross_category_recalls():
     )
 
     # Format data for comparison
-    # Handle drug recalls - could be DataFrame or dict with categorized field
+    # Handles drug recalls
     if isinstance(drug_recalls, dict) and "categorized" in drug_recalls:
         drug_df = drug_recalls["categorized"]
         drug_recalls_sum = drug_df['Count'].sum() if not drug_df.empty else 0
@@ -72,7 +59,7 @@ def get_cross_category_recalls():
     else:
         drug_recalls_sum = 0
 
-    # Handle food recalls - could be DataFrame or dict with categorized field
+    # Handles food recalls
     if isinstance(food_recalls, dict) and "categorized" in food_recalls:
         food_df = food_recalls["categorized"]
         food_recalls_sum = food_df['Count'].sum() if not food_df.empty else 0
@@ -81,7 +68,7 @@ def get_cross_category_recalls():
     else:
         food_recalls_sum = 0
 
-    # Handle device recalls - could be DataFrame or dict with categorized field
+    # Handles device recalls
     if isinstance(device_recalls, dict) and "categorized" in device_recalls:
         device_df = device_recalls["categorized"]
         device_recalls_sum = device_df['Count'].sum() if not device_df.empty else 0
@@ -90,7 +77,7 @@ def get_cross_category_recalls():
     else:
         device_recalls_sum = 0
 
-    # Create a unified DataFrame for comparison
+    # Creates a unified DataFrame for comparison
     recalls_df = pd.DataFrame({
         'Category': ['Drug', 'Food', 'Device'],
         'Recall Count': [drug_recalls_sum, food_recalls_sum, device_recalls_sum]
@@ -100,14 +87,13 @@ def get_cross_category_recalls():
 
 @st.cache_data(ttl=3600)
 def get_demographic_vs_adverse_events():
-    """Analyze correlation between patient demographics and adverse events."""
-    # Get demographic data
+    # Gets demographic data
     age_data = adverse_events_by_patient_age_group_within_data_range(
         st.session_state.start_date.strftime('%Y-%m-%d'),
         st.session_state.end_date.strftime('%Y-%m-%d')
     )
 
-    # Extract age data - could be DataFrame or dict
+    # Extracts age data
     if isinstance(age_data, dict) and "categorized" in age_data:
         age_data = age_data["categorized"]
     elif not isinstance(age_data, pd.DataFrame):
@@ -118,7 +104,7 @@ def get_demographic_vs_adverse_events():
         st.session_state.end_date
     )
 
-    # Extract sex data - could be DataFrame or dict
+    # Extracts sex data
     if isinstance(sex_data, dict) and "categorized" in sex_data:
         sex_data = sex_data["categorized"]
     elif not isinstance(sex_data, pd.DataFrame):
@@ -126,19 +112,19 @@ def get_demographic_vs_adverse_events():
 
     weight_data = get_drug_events_by_patient_weight()
 
-    # Extract weight data - could be DataFrame or dict
+    # Extracts weight data
     if isinstance(weight_data, dict) and "categorized" in weight_data:
         weight_data = weight_data["categorized"]
     elif not isinstance(weight_data, pd.DataFrame):
         weight_data = pd.DataFrame()
 
-    # Get adverse reaction data
+    # Gets adverse reaction data
     reaction_data = get_top_drug_reactions(
         st.session_state.start_date,
         st.session_state.end_date
     )
 
-    # Extract reaction data - could be DataFrame or dict
+    # Extracts reaction data
     if isinstance(reaction_data, dict) and "categorized" in reaction_data:
         reaction_data = reaction_data["categorized"]
     elif not isinstance(reaction_data, pd.DataFrame):
@@ -156,8 +142,6 @@ def get_demographic_vs_adverse_events():
 
 @st.cache_data(ttl=3600)
 def analyze_health_effects_across_categories():
-    """Analyze health effects across different product categories."""
-    # Get health effects data from different categories
     drug_reactions = get_top_drug_reactions(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -193,8 +177,6 @@ def analyze_health_effects_across_categories():
 
 @st.cache_data(ttl=3600)
 def get_product_vs_problem_correlation():
-    """Get correlation between product types and reported problems."""
-    # Get product and problem data
     tobacco_products = get_tobacco_reports_by_product(
         st.session_state.start_date,
         st.session_state.end_date
@@ -233,12 +215,12 @@ def get_product_vs_problem_correlation():
 
     return results
 
+
 def calculate_correlation_between_categories(df1, df2, col1, col2):
-    """Calculate correlation between two data categories."""
     if df1.empty or df2.empty:
         return None, None
 
-    # Merge data if possible or create a correlation analysis
+    # Merge data / create a correlation analysis
     try:
         merged_df = pd.merge(df1, df2, left_index=True, right_index=True)
         if merged_df.empty:
@@ -254,7 +236,6 @@ def calculate_correlation_between_categories(df1, df2, col1, col2):
         return None, None
 
 def display_correlation_analysis():
-    """Display correlation analysis between different FDA data points."""
     st.title("Correlation Analysis")
 
     st.write("""
@@ -262,7 +243,7 @@ def display_correlation_analysis():
     that might not be apparent when looking at individual categories.
     """)
 
-    # Create tabs for different correlation analyses
+    # Create tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "Cross-Category Recalls",
         "Demographics vs. Adverse Events",
@@ -270,7 +251,7 @@ def display_correlation_analysis():
         "Product-Problem Correlation"
     ])
 
-    # Tab 1: Cross-Category Recalls
+    # Cross-Category Recalls
     with tab1:
         st.header("Cross-Category Recall Analysis")
 
@@ -281,7 +262,6 @@ def display_correlation_analysis():
                 if recalls_df.empty or recalls_df["Recall Count"].sum() == 0:
                     st.warning("No recall data available for the selected time period.")
                 else:
-                    # Create visualizations
                     col1, col2 = st.columns(2)
 
                     with col1:
@@ -331,7 +311,7 @@ def display_correlation_analysis():
             st.error(f"An error occurred while analyzing recall data: {str(e)}")
             st.info("This could be due to network connectivity issues or API limitations. Please try adjusting the date range or sample size.")
 
-    # Tab 2: Demographics vs. Adverse Events
+    # Demographics vs. Adverse Events
     with tab2:
         st.header("Demographics vs. Adverse Events Analysis")
 
@@ -342,8 +322,6 @@ def display_correlation_analysis():
                 if all(df.empty for df in demo_vs_events.values()):
                     st.warning("No demographic or adverse event data available for the selected time period.")
                 else:
-                    # Age vs. Adverse Events section removed as requested
-
                     # Sex vs. Adverse Events
                     st.subheader("Sex vs. Adverse Events")
                     if not demo_vs_events["sex_data"].empty:
@@ -353,7 +331,7 @@ def display_correlation_analysis():
                                 lambda x: float(x.replace("%", "")) if isinstance(x, str) else x
                             )
                         except Exception:
-                            # Handle case where Percentage isn't a string or doesn't contain '%'
+                            # TODO Handle case where Percentage isn't a string or doesn't contain '%'
                             pass
 
                         fig = px.pie(
@@ -406,7 +384,7 @@ def display_correlation_analysis():
             st.error(f"An error occurred while analyzing demographic data: {str(e)}")
             st.info("This could be due to network connectivity issues or API limitations. Please try adjusting the date range or sample size.")
 
-    # Tab 3: Health Effects Comparison
+    # Health Effects Comparison
     with tab3:
         st.header("Health Effects Comparison Across Categories")
 
@@ -468,7 +446,6 @@ def display_correlation_analysis():
                     if combined_effects:
                         combined_df = pd.DataFrame(combined_effects)
 
-                        # Create visualization
                         st.subheader("Top Health Effects Across Categories")
 
                         # Group bar chart comparing health effects across categories
@@ -503,7 +480,6 @@ def display_correlation_analysis():
                         )
                         st.plotly_chart(fig, use_container_width=True)
 
-                        # Display data table in a collapsible expander as requested
                         with st.expander("View Health Effects Data", expanded=False):
                             st.dataframe(combined_df, use_container_width=True)
 
@@ -538,7 +514,7 @@ def display_correlation_analysis():
             st.error(f"An error occurred while analyzing health effects data: {str(e)}")
             st.info("This could be due to network connectivity issues or API limitations. Please try adjusting the date range or sample size.")
 
-    # Tab 4: Product-Problem Correlation
+    # Product-Problem Correlation
     with tab4:
         st.header("Product Type and Problem Correlation")
 
@@ -582,8 +558,6 @@ def display_correlation_analysis():
                     else:
                         st.info("Insufficient tobacco product or problem data.")
 
-                    # Device Types vs. Medical Specialties section removed as requested
-
                     # Correlation analysis and interpretation
                     st.subheader("Correlation Analysis and Insights")
 
@@ -606,8 +580,6 @@ def display_correlation_analysis():
 
                         insights.append(f"- For tobacco products, **{product_name}** is most frequently reported with {product_count} reports")
                         insights.append(f"- The most common problem type is **{problem_name}** with {problem_count} reports")
-
-                    # Remove device insights since we removed the device section
 
                     # Display insights
                     if insights:

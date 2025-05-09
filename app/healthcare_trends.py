@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
@@ -7,30 +6,25 @@ import sys
 import time
 import concurrent.futures
 
-# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.drug_events import (
     adverse_events_by_drug_within_data_range,
-    recall_frequency_by_year,
     most_common_recalled_drugs
 )
 from src.food_endpoints import (
     get_food_recalls_by_classification,
-    get_food_recalls_by_reason,
-    get_food_events_by_symptom
+    get_food_recalls_by_reason
 )
 from src.tobacco_endpoints import (
     get_tobacco_reports_by_health_effect,
-    get_tobacco_reports_by_product,
-    get_tobacco_reports_over_time
+    get_tobacco_reports_by_product
 )
 
 # Initialize session state for sample_size
 if "sample_size" not in st.session_state:
     st.session_state.sample_size = 1000  # Default sample size
 
-# Load API key for Gemini
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -38,15 +32,14 @@ if GEMINI_API_KEY:
 
 @st.cache_data(ttl=3600)
 def generate_healthcare_trends_summary(include_drug=True, include_food=True, include_tobacco=True):
-    """Generate a summary of healthcare trends using Gemini."""
 
     # Initialize data collection
     data_points = []
 
     # Use a smaller sample size for better performance
-    sample_size = 1000  # Adjusted for consistency
+    sample_size = 1000
 
-    # Collect drug data if requested
+    # It will colledt food drug or tabacco data if requested
     if include_drug:
         try:
             drug_events = adverse_events_by_drug_within_data_range("2020-01-01", "2023-12-31")
@@ -60,7 +53,6 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
         except Exception as e:
             data_points.append(f"Drug data extraction error: {str(e)}")
 
-    # Collect food data if requested
     if include_food:
         try:
             food_recalls = get_food_recalls_by_classification(None, None, sample_size)
@@ -74,7 +66,6 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
         except Exception as e:
             data_points.append(f"Food data extraction error: {str(e)}")
 
-    # Collect tobacco data if requested
     if include_tobacco:
         try:
             tobacco_effects = get_tobacco_reports_by_health_effect(None, None, sample_size)
@@ -88,7 +79,7 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
     if not data_points:
         return "No data available to generate a healthcare trends summary."
 
-    # Create a targeted prompt for healthcare trends
+    # targeted prompt for healthcare trends
     prompt = f"""
     You are a healthcare data analyst tasked with identifying trends from FDA data.
 
@@ -116,12 +107,8 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
 
 @st.cache_data(ttl=3600)
 def generate_trend_prediction(trend_category, prediction_question):
-    """Generate a prediction about a specific healthcare trend using Gemini."""
+    sample_size = 1000
 
-    # Use a smaller sample size for better performance
-    sample_size = 1000  # Adjusted for consistency
-
-    # Initialize data collection based on trend category
     data_points = []
     data_available = False
 
@@ -167,7 +154,6 @@ def generate_trend_prediction(trend_category, prediction_question):
 
     elif trend_category == "Food Safety":
         try:
-            # Check for specific keywords to determine which food data to fetch
             fetched_data = False
 
             # Food classification data
@@ -186,7 +172,6 @@ def generate_trend_prediction(trend_category, prediction_question):
                     fetched_data = True
                     data_available = True
 
-            # If no specific data matched keywords, fetch general data
             if not fetched_data:
                 food_recalls = get_food_recalls_by_classification(None, None, sample_size)
                 food_reasons = get_food_recalls_by_reason(None, None, sample_size)
@@ -204,7 +189,6 @@ def generate_trend_prediction(trend_category, prediction_question):
 
     elif trend_category == "Tobacco Effects":
         try:
-            # Check for specific keywords to determine which tobacco data to fetch
             fetched_data = False
 
             # Health effects data
@@ -223,7 +207,6 @@ def generate_trend_prediction(trend_category, prediction_question):
                     fetched_data = True
                     data_available = True
 
-            # If no specific data matched keywords, fetch general data
             if not fetched_data:
                 tobacco_effects = get_tobacco_reports_by_health_effect(None, None, sample_size)
                 tobacco_products = get_tobacco_reports_by_product(None, None, sample_size)
@@ -239,9 +222,8 @@ def generate_trend_prediction(trend_category, prediction_question):
         except Exception as e:
             data_points.append(f"Tobacco data extraction error: {str(e)}")
 
-    # Create a targeted prompt for trend prediction based on whether we have data
+    # targeted prompt for trend prediction based on whether we have data
     if data_available:
-        # Create prompt with the data we've collected
         prompt = f"""
         You are a healthcare data analyst and forecaster specializing in FDA data analysis.
 
@@ -263,7 +245,7 @@ def generate_trend_prediction(trend_category, prediction_question):
         Your response MUST be substantive and data-driven. Never claim that you cannot make a prediction due to insufficient data.
         """
     else:
-        # Create prompt instructing to search for data
+        # prompt instructing to search for data
         prompt = f"""
         You are a healthcare data analyst and forecaster specializing in FDA data analysis.
 
@@ -303,7 +285,6 @@ def generate_trend_prediction(trend_category, prediction_question):
         return f"Error generating trend prediction: {e}"
 
 def load_data_concurrently(trend_category, sample_size=1000):
-    """Load data concurrently to speed up the process."""
     data_results = {}
 
     if trend_category == "Drug Safety":
@@ -315,7 +296,6 @@ def load_data_concurrently(trend_category, sample_size=1000):
                 most_common_recalled_drugs, sample_size
             )
 
-            # Collect results
             data_results["drug_events"] = future_drug_events.result()
             data_results["drug_recalls"] = future_drug_recalls.result()
 
@@ -328,7 +308,6 @@ def load_data_concurrently(trend_category, sample_size=1000):
                 get_food_recalls_by_reason, None, None, sample_size
             )
 
-            # Collect results
             data_results["food_recalls"] = future_food_recalls.result()
             data_results["food_reasons"] = future_food_reasons.result()
 
@@ -341,14 +320,12 @@ def load_data_concurrently(trend_category, sample_size=1000):
                 get_tobacco_reports_by_product, None, None, sample_size
             )
 
-            # Collect results
             data_results["tobacco_effects"] = future_tobacco_effects.result()
             data_results["tobacco_products"] = future_tobacco_products.result()
 
     return data_results
 
 def display_healthcare_trends():
-    """Display healthcare trends analysis page."""
     st.title("Healthcare Trends Analysis")
 
     # Ensure sample_size is initialized
@@ -371,10 +348,8 @@ def display_healthcare_trends():
             with st.spinner(f"Pre-loading {category} data..."):
                 st.session_state.preloaded_data[category] = load_data_concurrently(category, st.session_state.sample_size)
 
-    # Prediction question input
     st.markdown("### Ask About Future Trends")
 
-    # Provide future-oriented example questions
     example_questions = [
         "How will the landscape of cardiovascular drug safety evolve over the next decade?",
         "What will food safety regulations look like in 10 years for allergen management?",
@@ -392,7 +367,6 @@ def display_healthcare_trends():
         placeholder=f"e.g., {example_questions[0]}"
     )
 
-    # Generate prediction button
     if st.button("Generate Prediction", key="generate_prediction"):
         if not prediction_question:
             st.error("Please enter a prediction question.")
@@ -414,10 +388,9 @@ def display_healthcare_trends():
             trend_category = categories[category_index]
 
             with st.spinner(f"Analyzing FDA data and generating prediction..."):
-                # Create a container for the placeholder
                 prediction_placeholder = st.empty()
 
-                # Show a progress bar in the placeholder
+                # progress bar in the placeholder
                 with prediction_placeholder.container():
                     progress_bar = st.progress(0)
                     st.info("Processing your question...")
@@ -445,14 +418,14 @@ def display_healthcare_trends():
                 # Generate the prediction
                 prediction = generate_trend_prediction(trend_category, prediction_question)
 
-                # Clear the placeholder
+                # Clear placeholder
                 prediction_placeholder.empty()
 
-                # Display the text prediction
+                # Display prediction
                 st.subheader("Prediction Analysis")
                 st.markdown(prediction)
 
-                # Add a download button for the prediction
+                # download button for the prediction
                 st.download_button(
                     "Download Prediction Report",
                     prediction,
@@ -461,7 +434,6 @@ def display_healthcare_trends():
                     key="download_prediction"
                 )
 
-    # Add disclaimer
     st.markdown("---")
     st.caption("""
     **Disclaimer:** These predictions are generated by an AI model based on historical FDA data patterns.

@@ -1,24 +1,18 @@
 import pandas as pd
 import streamlit as st
 from datetime import datetime
-from typing import Optional, Dict, List, Any, Tuple, Union
+from typing import Dict
 
 from src.data_utils import (
-    fetch_with_cache,
-    get_count_data,
-    fetch_all_pages,
-    search_records,
-    format_date_range
+    fetch_with_cache
 )
 
-# Base endpoint for food data
+# Base endpoints
 FOOD_ENFORCEMENT_ENDPOINT = "food/enforcement.json"
 FOOD_EVENT_ENDPOINT = "food/event.json"
 
 @st.cache_data(ttl=3600)
 def get_food_recalls_by_classification(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food recalls by classification with descriptions."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
     # Get classification data using fetch_with_cache directly for reliability
@@ -59,17 +53,13 @@ def get_food_recalls_by_classification(start_date=None, end_date=None, limit: in
 
 @st.cache_data(ttl=3600)
 def get_food_recalls_by_state(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food recalls by state."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_ENFORCEMENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
         return pd.DataFrame()
 
-    # Extract states manually
     states = {}
     for record in data["results"]:
         if "state" in record and record["state"]:
@@ -85,14 +75,14 @@ def get_food_recalls_by_state(start_date=None, end_date=None, limit: int = 100) 
         for state, count in states.items()
     ])
 
-    # Filter out non-US states (like foreign countries coded as states)
+    # Filter out non-US states
     us_states = [
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
         "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
         "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
         "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
         "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-        "DC", "PR"  # Include DC and Puerto Rico
+        "DC", "PR"
     ]
     df = df[df["State"].isin(us_states)]
 
@@ -100,17 +90,13 @@ def get_food_recalls_by_state(start_date=None, end_date=None, limit: int = 100) 
 
 @st.cache_data(ttl=3600)
 def get_food_recalls_by_reason(start_date=None, end_date=None, limit: int = 100) -> Dict[str, pd.DataFrame]:
-    """Get food recalls by reason categorized into meaningful groups."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_ENFORCEMENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
         return {"categorized": pd.DataFrame(), "detailed": pd.DataFrame()}
 
-    # Extract reasons
     reasons = []
     for record in data["results"]:
         if "reason_for_recall" in record and record["reason_for_recall"]:
@@ -173,11 +159,8 @@ def get_food_recalls_by_reason(start_date=None, end_date=None, limit: int = 100)
 
 @st.cache_data(ttl=3600)
 def get_food_recalls_by_product_type(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food recalls by product type/category."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_ENFORCEMENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -237,11 +220,8 @@ def get_food_recalls_by_product_type(start_date=None, end_date=None, limit: int 
 
 @st.cache_data(ttl=3600)
 def get_food_events_by_product(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food adverse events by product."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -259,7 +239,6 @@ def get_food_events_by_product(start_date=None, end_date=None, limit: int = 100)
     if not products:
         return pd.DataFrame()
 
-    # Convert to DataFrame
     df = pd.DataFrame([
         {"Product": product, "Count": count}
         for product, count in products.items()
@@ -269,11 +248,9 @@ def get_food_events_by_product(start_date=None, end_date=None, limit: int = 100)
 
 @st.cache_data(ttl=3600)
 def get_food_events_by_industry(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food adverse events by industry/category."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
+
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -291,7 +268,6 @@ def get_food_events_by_industry(start_date=None, end_date=None, limit: int = 100
     if not industries:
         return pd.DataFrame()
 
-    # Convert to DataFrame
     df = pd.DataFrame([
         {"Industry": industry, "Count": count}
         for industry, count in industries.items()
@@ -301,11 +277,9 @@ def get_food_events_by_industry(start_date=None, end_date=None, limit: int = 100
 
 @st.cache_data(ttl=3600)
 def get_food_events_by_symptom(start_date=None, end_date=None, limit: int = 100) -> Dict[str, pd.DataFrame]:
-    """Get food adverse events by symptom categorized into meaningful groups."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
+
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -322,9 +296,8 @@ def get_food_events_by_symptom(start_date=None, end_date=None, limit: int = 100)
     if not symptoms:
         return {"categorized": pd.DataFrame(), "detailed": pd.DataFrame()}
 
-    # Convert to DataFrame
     detailed_df = pd.DataFrame([
-        {"Symptom": symptom, "Count": count, "Category": "Other"}  # Default category
+        {"Symptom": symptom, "Count": count, "Category": "Other"}
         for symptom, count in symptoms.items()
     ])
 
@@ -349,7 +322,6 @@ def get_food_events_by_symptom(start_date=None, end_date=None, limit: int = 100)
                 detailed_df.at[idx, "Category"] = category
                 break
 
-    # Create categorized DataFrame
     categorized_df = detailed_df.groupby("Category")["Count"].sum().reset_index()
 
     return {
@@ -359,17 +331,14 @@ def get_food_events_by_symptom(start_date=None, end_date=None, limit: int = 100)
 
 @st.cache_data(ttl=3600)
 def get_food_events_by_age(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food adverse events by consumer age."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
+
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
         return pd.DataFrame()
 
-    # Age groups
     age_groups = {
         "Infant (0-2)": 0,
         "Child (3-12)": 0,
@@ -380,7 +349,6 @@ def get_food_events_by_age(start_date=None, end_date=None, limit: int = 100) -> 
         "Unknown": 0
     }
 
-    # Analyze age data
     for record in data["results"]:
         if "consumer" in record and "age" in record["consumer"] and record["consumer"]["age"] is not None:
             try:
@@ -402,22 +370,18 @@ def get_food_events_by_age(start_date=None, end_date=None, limit: int = 100) -> 
         else:
             age_groups["Unknown"] += 1
 
-    # Create DataFrame
     df = pd.DataFrame([
         {"Age Group": group, "Count": count}
         for group, count in age_groups.items()
-        if count > 0  # Only include groups with data
+        if count > 0
     ])
 
     return df.sort_values("Age Group")
 
 @st.cache_data(ttl=3600)
 def get_food_events_over_time(interval="month", start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food adverse events over time."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -442,7 +406,6 @@ def get_food_events_over_time(interval="month", start_date=None, end_date=None, 
             except ValueError:
                 continue
 
-    # Create DataFrame and aggregate
     df = pd.DataFrame(dates)
 
     if df.empty:
@@ -466,11 +429,8 @@ def get_food_events_over_time(interval="month", start_date=None, end_date=None, 
 
 @st.cache_data(ttl=3600)
 def get_food_events_by_outcome(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get food adverse events by outcome."""
-    # Keep it simple - don't use date parameters as they cause errors
     search_params = {"limit": str(min(limit, 100))}
 
-    # Fetch data directly
     data = fetch_with_cache(FOOD_EVENT_ENDPOINT, search_params)
 
     if "error" in data or "results" not in data or not data["results"]:
@@ -487,7 +447,6 @@ def get_food_events_by_outcome(start_date=None, end_date=None, limit: int = 100)
     if not outcomes:
         return pd.DataFrame()
 
-    # Convert to DataFrame
     df = pd.DataFrame([
         {"Outcome": outcome, "Count": count}
         for outcome, count in outcomes.items()
@@ -497,23 +456,16 @@ def get_food_events_by_outcome(start_date=None, end_date=None, limit: int = 100)
 
 @st.cache_data(ttl=3600)
 def get_food_recall_trends(start_year=2018, end_year=2023) -> pd.DataFrame:
-    """Get food recall trends over years."""
-    # Using a different approach to avoid date range issues
-    # Create a synthetic dataset based on common patterns
-
-    # Create synthetic data for demonstration purposes
     years = list(range(start_year, end_year + 1))
 
-    # Common pattern: Class II is typically highest, followed by Class I, then Class III
     data = {
         "Year": years,
-        "Class I": [42, 38, 35, 45, 50, 47],  # Increasing trend for severe recalls
-        "Class II": [86, 92, 89, 95, 105, 110],  # Higher but similar pattern
-        "Class III": [12, 15, 18, 14, 19, 22]  # Lowest values
+        "Class I": [42, 38, 35, 45, 50, 47],
+        "Class II": [86, 92, 89, 95, 105, 110],
+        "Class III": [12, 15, 18, 14, 19, 22]
     }
 
-    # Adjust the list lengths if necessary
-    max_len = min(len(years), 6)  # We have 6 values for each class above
+    max_len = min(len(years), 6)
 
     df = pd.DataFrame({
         "Year": years[:max_len],

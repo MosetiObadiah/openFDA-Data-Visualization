@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
@@ -11,22 +9,13 @@ from src.device_events import (
     device_class_distribution,
     device_problems_by_year,
     device_manufacturer_analysis,
-    get_top_device_classes,
-    get_device_problems_trend,
-    get_manufacturer_market_share,
     get_device_events_by_age
-)
-from src.utils import get_state_abbreviations
-from src.components import (
-    render_metric_header,
-    render_data_table
 )
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str = None) -> str:
-    """Use Gemini API to generate insights from the DataFrame."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     if custom_question:
         prompt = f"""
@@ -57,10 +46,9 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
         return f"Error generating insights: {e}"
 
 def display_device_class_distribution():
-    """Display device class distribution."""
     st.subheader("Device Class Distribution")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -71,7 +59,6 @@ def display_device_class_distribution():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -100,14 +87,12 @@ def display_device_class_distribution():
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, (start_str, end_str), "device_class")
 
 def display_device_problems():
-    """Display device problems."""
     st.subheader("Device Problems")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -118,7 +103,6 @@ def display_device_problems():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -147,14 +131,12 @@ def display_device_problems():
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, (start_str, end_str), "device_problems")
 
 def display_manufacturer_analysis():
-    """Display manufacturer analysis."""
     st.subheader("Manufacturer Analysis")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -194,14 +176,12 @@ def display_manufacturer_analysis():
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, (start_str, end_str), "manufacturer")
 
 def display_device_events_by_age():
-    """Display device events by age."""
     st.subheader("Device Events by Age")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -241,11 +221,9 @@ def display_device_events_by_age():
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, (start_str, end_str), "device_age")
 
 def display_device_reports():
-    """Display device reports with various visualizations."""
     st.title("Device Reports")
 
     # Create tabs for different sections
@@ -269,7 +247,6 @@ def display_device_reports():
         display_recall_analysis()
 
 def display_advisory_committees():
-    """Display advisory committee distribution."""
     st.subheader("Advisory Committee Distribution")
 
     endpoint = "device/510k.json"
@@ -286,11 +263,10 @@ def display_advisory_committees():
     df = pd.DataFrame(data["results"])
     df.columns = ["Committee", "Count"]
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
-        # Horizontal bar chart for better readability
+        # Horizontal bar chart
         fig = px.bar(
             df,
             y="Committee",
@@ -298,7 +274,7 @@ def display_advisory_committees():
             title="Advisory Committee Distribution",
             orientation='h'
         )
-        fig.update_layout(height=600)  # Make it taller to accommodate committee names
+        fig.update_layout(height=600)
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:
@@ -315,11 +291,9 @@ def display_advisory_committees():
     with st.expander("Detailed Statistics", expanded=False):
         st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Advisory Committees", "advisory_committees")
 
 def display_manufacturers():
-    """Display manufacturer analysis."""
     st.subheader("Manufacturer Analysis")
 
     endpoint = "device/510k.json"
@@ -336,7 +310,6 @@ def display_manufacturers():
     df = pd.DataFrame(data["results"])
     df.columns = ["Manufacturer", "Count"]
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -365,11 +338,9 @@ def display_manufacturers():
     with st.expander("Detailed Statistics", expanded=False):
         st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Manufacturers", "device_manufacturers")
 
 def display_enforcement_reports():
-    """Display enforcement reports over time."""
     st.subheader("Enforcement Reports Timeline")
 
     endpoint = "device/enforcement.json"
@@ -387,7 +358,6 @@ def display_enforcement_reports():
     df.columns = ["Date", "Count"]
     df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d")
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -410,15 +380,12 @@ def display_enforcement_reports():
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display detailed statistics in expander
     with st.expander("Detailed Statistics", expanded=False):
         st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Enforcement Reports", "enforcement_reports")
 
 def display_recall_analysis():
-    """Display recall analysis."""
     st.subheader("Recall Analysis")
 
     endpoint = "device/recall.json"
@@ -435,7 +402,6 @@ def display_recall_analysis():
     df = pd.DataFrame(data["results"])
     df.columns = ["Root Cause", "Count"]
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -464,7 +430,6 @@ def display_recall_analysis():
     with st.expander("Detailed Statistics", expanded=False):
         st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Recall Analysis", "recall_analysis")
 
 def render_ai_insights_section(df, context, key_prefix):

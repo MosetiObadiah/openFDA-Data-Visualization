@@ -1,3 +1,1 @@
-"""
-This module contains the core functionality for the OpenFDA Data Visualization Dashboard.
-"""
+##module for core app functionality

@@ -8,7 +8,6 @@ import os
 from dotenv import load_dotenv
 import sys
 
-# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.food_endpoints import (
@@ -25,7 +24,7 @@ from src.food_endpoints import (
     get_food_recall_trends
 )
 
-# Load API key for Gemini
+# Gemini
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -74,9 +73,7 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
         return f"Error generating insights: {e}"
 
 def render_ai_insights_section(df, context, key_prefix):
-    """Render AI insights section with option for custom questions using unique keys."""
     st.subheader("AI Insights")
-    # Ensure key is unique across the entire app with food_ prefix
     question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
     if st.button("Generate Insights", key=f"{key_prefix}_insights"):
         with st.spinner("Generating insights..."):
@@ -84,10 +81,9 @@ def render_ai_insights_section(df, context, key_prefix):
             st.write(insights)
 
 def display_food_recall_classification():
-    """Display food recalls by classification"""
     st.subheader("Food Recalls by Classification")
 
-    # Use global date range from session state
+    # global date range from session state
     df = get_food_recalls_by_classification(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -98,11 +94,10 @@ def display_food_recall_classification():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
-        # Bar chart with hover text showing descriptions
+        # Bar chart
         fig_bar = px.bar(
             df,
             x="Classification",
@@ -133,14 +128,13 @@ def display_food_recall_classification():
     st.subheader("Classification Descriptions")
     st.dataframe(df[["Classification", "Description", "Count"]], use_container_width=True, hide_index=True)
 
-    # AI Insights section
     render_ai_insights_section(df, "food recall classifications", "recall_class")
 
 def display_food_recall_reason():
     """Display food recalls by reason"""
     st.subheader("Food Recalls by Reason")
 
-    # Use global date range from session state
+    # global date range from session state
     result_df = get_food_recalls_by_reason(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -205,18 +199,18 @@ def display_food_recall_reason():
             # Create a figure for top reasons by category
             fig_reasons = px.bar(
                 top_reasons.groupby("Category").head(top_n),
-                y="Reason",  # Change to y-axis for horizontal bars
-                x="Count",   # Change to x-axis for horizontal bars
+                y="Reason",
+                x="Count",
                 color="Category",
                 facet_col="Category",
                 facet_col_wrap=1,  # One category per row for better readability
                 title=f"Top {top_n} Reasons by Category",
-                orientation='h',   # Horizontal orientation
+                orientation='h',
                 height=200 * len(selected_categories),  # Adjust height based on number of categories
                 labels={"Reason": "", "Count": "Number of Recalls"}  # Better labels
             )
 
-            # Customize the layout for better text display
+            # Customizes the layout for better text display
             fig_reasons.update_layout(
                 margin=dict(l=20, r=20, t=80, b=20),
                 yaxis={'categoryorder':'total ascending'},
@@ -224,7 +218,7 @@ def display_food_recall_reason():
                 xaxis_title="Number of Recalls"
             )
 
-            # Adjust facet spacing and titles
+            # Adjusting facet spacing and titles
             fig_reasons.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
             # Customize subplot settings for better appearance
@@ -238,7 +232,7 @@ def display_food_recall_reason():
 
             st.plotly_chart(fig_reasons, use_container_width=True)
 
-            # Also offer a clean table view for reference
+            # Aclean table view for reference
             with st.expander("View detailed reason data", expanded=False):
                 st.dataframe(
                     top_reasons.groupby("Category").head(top_n)[["Category", "Reason", "Count"]]
@@ -246,16 +240,14 @@ def display_food_recall_reason():
                     use_container_width=True
                 )
 
-        # AI Insights section
         render_ai_insights_section(result_df, "food recall reasons", "recall_reason")
     else:
         st.warning("No data available for the selected date range.")
 
 def display_food_recall_geography():
-    """Display food recalls by geography"""
     st.subheader("Food Recalls by Geography")
 
-    # Use global date range from session state
+    # global date range from session state
     df = get_food_recalls_by_state(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -266,7 +258,6 @@ def display_food_recall_geography():
         st.warning("No data available for the selected date range.")
         return
 
-    # Add full state names for better visualization
     state_names = {
         'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
         'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
@@ -283,11 +274,10 @@ def display_food_recall_geography():
         'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia', 'PR': 'Puerto Rico'
     }
 
-    # Create a copy with state names for display
     display_df = df.copy()
     display_df['State Name'] = display_df['State'].map(state_names)
 
-    # Create a choropleth map
+    # choropleth map
     fig_map = px.choropleth(
         df,
         locations="State",
@@ -323,14 +313,12 @@ def display_food_recall_geography():
         st.dataframe(display_df[["State Name", "State", "Count"]].sort_values("Count", ascending=False),
                     use_container_width=True, hide_index=True)
 
-    # AI Insights section
     render_ai_insights_section(df, "food recall geographical distribution", "recall_geo")
 
 def display_food_recall_product():
-    """Display food recalls by product type"""
     st.subheader("Food Recalls by Product Type")
 
-    # Use global date range from session state
+    # global date range from session state
     df = get_food_recalls_by_product_type(
         st.session_state.start_date,
         st.session_state.end_date,
@@ -341,7 +329,6 @@ def display_food_recall_product():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -368,18 +355,14 @@ def display_food_recall_product():
         )
         st.plotly_chart(fig_treemap, use_container_width=True)
 
-    # Show data table in collapsed expander
     with st.expander("View Product Category Data", expanded=False):
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # AI Insights section
     render_ai_insights_section(df, "food recall product categories", "recall_product")
 
 def display_food_adverse_events():
-    """Display food adverse events analysis with enhanced visualizations."""
     st.subheader("Food Adverse Events Analysis")
 
-    # Create tabs for different analyses with unique keys
     event_tabs = st.tabs([
         "By Industry",
         "By Product",
@@ -388,7 +371,7 @@ def display_food_adverse_events():
         "By Outcome"
     ])
 
-    # By Industry Tab
+    # By Industry
     with event_tabs[0]:
         st.subheader("Adverse Events by Food Industry")
 
@@ -405,7 +388,6 @@ def display_food_adverse_events():
             top_n = st.slider("Number of top industries to show", 5, 20, 10, key="food_industry_slider")
             top_industry_df = industry_df.head(top_n)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -435,10 +417,9 @@ def display_food_adverse_events():
             with st.expander("View Full Industry Data", expanded=False):
                 st.dataframe(industry_df, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(industry_df, "food industries involved in adverse events", "food_industry")
 
-    # By Product Tab
+    # By Product
     with event_tabs[1]:
         st.subheader("Adverse Events by Product")
 
@@ -455,7 +436,6 @@ def display_food_adverse_events():
             top_n = st.slider("Number of top products to show", 5, 20, 10, key="food_product_slider")
             top_product_df = product_df.head(top_n)
 
-            # Create visualizations
             fig_product = px.bar(
                 top_product_df,
                 y="Product",
@@ -479,10 +459,9 @@ def display_food_adverse_events():
                 with st.expander("View Top Products Data", expanded=False):
                     st.dataframe(top_product_df, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(product_df, "products involved in food adverse events", "food_product_insights")
 
-    # By Symptom Tab
+    # By Symptom
     with event_tabs[2]:
         st.subheader("Adverse Events by Symptom")
 
@@ -496,7 +475,6 @@ def display_food_adverse_events():
             category_df = symptom_result["categorized"]
             detailed_df = symptom_result["detailed"]
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -545,12 +523,11 @@ def display_food_adverse_events():
                 fig_top_symptoms.update_layout(showlegend=False, yaxis={'categoryorder':'total ascending'})
                 st.plotly_chart(fig_top_symptoms, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(symptom_result, "symptoms in food adverse events", "food_symptom_insights")
         else:
             st.warning("No symptom data available.")
 
-    # By Age Tab
+    # By Age
     with event_tabs[3]:
         st.subheader("Adverse Events by Consumer Age")
 
@@ -563,7 +540,6 @@ def display_food_adverse_events():
         if age_df.empty:
             st.warning("No age data available.")
         else:
-            # Create visualizations
             fig_age = px.bar(
                 age_df,
                 x="Age Group",
@@ -582,13 +558,11 @@ def display_food_adverse_events():
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-            # Show data table
             st.dataframe(age_df, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(age_df, "age distribution in food adverse events", "food_age_insights")
 
-    # By Outcome Tab
+    # By Outcome
     with event_tabs[4]:
         st.subheader("Adverse Events by Outcome")
 
@@ -605,7 +579,6 @@ def display_food_adverse_events():
             top_n = st.slider("Number of top outcomes to show", 5, 15, 10, key="food_outcome_slider")
             top_outcome_df = outcome_df.head(top_n)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -631,18 +604,14 @@ def display_food_adverse_events():
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # Show data table
             with st.expander("View Full Outcome Data", expanded=False):
                 st.dataframe(outcome_df, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(outcome_df, "outcomes of food adverse events", "food_outcome_insights")
 
 def display_food_reports():
-    """Display food reports dashboard with multiple analysis tabs."""
     st.title("Food Reports")
 
-    # Create tabs for different analyses
     tabs = st.tabs([
         "Recall Classification",
         "Recall Reasons",
@@ -652,35 +621,27 @@ def display_food_reports():
         "Trends Over Time"
     ])
 
-    # 1. Food Recalls by Classification
     with tabs[0]:
         display_food_recall_classification()
 
-    # 2. Food Recalls by Reason
     with tabs[1]:
         display_food_recall_reason()
 
-    # 3. Food Recalls by Geography
     with tabs[2]:
         display_food_recall_geography()
 
-    # 4. Food Recalls by Product Type
     with tabs[3]:
         display_food_recall_product()
 
-    # 5. Food Adverse Events Analysis
     with tabs[4]:
         display_food_adverse_events()
 
-    # 6. Trends Over Time
     with tabs[5]:
         display_food_trends()
 
 def display_food_trends():
-    """Display food recall and event trends over time."""
     st.subheader("Food Safety Trends Over Time")
 
-    # Create subtabs
     trend_tabs = st.tabs(["Recalls by Year", "Events Timeline"])
 
     # Recalls by Year
@@ -726,18 +687,16 @@ def display_food_trends():
             )
             st.plotly_chart(fig_area, use_container_width=True)
 
-            # Show data table
             with st.expander("View Data Table", expanded=False):
                 st.dataframe(trend_df, use_container_width=True)
 
-            # AI Insights
             render_ai_insights_section(trend_df, "food recall trends over time", "food_trends")
 
     # Events Timeline
     with trend_tabs[1]:
         st.subheader("Food Adverse Events Timeline")
 
-        # Time interval selector with unique key
+        # Time interval selector
         interval = st.radio(
             "Select Time Interval",
             options=["year", "quarter", "month"],
@@ -757,7 +716,6 @@ def display_food_trends():
         if time_df.empty:
             st.warning("No time series data available for the selected date range.")
         else:
-            # Create visualizations
             fig_line = px.line(
                 time_df,
             x="Date",
@@ -778,9 +736,7 @@ def display_food_trends():
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
-            # Show data table
             with st.expander("View Data Table", expanded=False):
                 st.dataframe(time_df, use_container_width=True)
 
-        # AI Insights
             render_ai_insights_section(time_df, "food adverse events timeline", "food_events_time")

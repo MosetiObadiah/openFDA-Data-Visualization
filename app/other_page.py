@@ -1,29 +1,21 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, date
 import google.generativeai as genai
 import os
 import sys
 from dotenv import load_dotenv
 
-# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.substance_endpoints import (
     get_substance_by_relationship_name,
     get_substance_by_moiety_name,
-    get_substance_by_code_system,
-    get_substance_by_structure_format,
-    search_substance_by_name,
     get_nsde_by_product_type,
     get_nsde_by_marketing_category,
-    get_nsde_by_route,
-    search_nsde_by_ingredient
+    get_nsde_by_route
 )
 
-# Load API key for Gemini
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -32,7 +24,6 @@ else:
     st.warning("Gemini API key not found. AI insights will not be available.")
 
 def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str = None) -> str:
-    """Generate AI insights from data using Gemini"""
     if not GEMINI_API_KEY or df.empty:
         return "No data available for insights or API key not configured."
 
@@ -62,7 +53,6 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
         return f"Error generating insights: {e}"
 
 def render_ai_insights_section(df, context, key_prefix):
-    """Render AI insights section with option for custom questions"""
     st.subheader("AI Insights")
     question = st.text_input("Custom question (optional)", key=f"{key_prefix}_question")
     if st.button("Generate Insights", key=f"{key_prefix}_insights"):
@@ -71,7 +61,6 @@ def render_ai_insights_section(df, context, key_prefix):
             st.write(insights)
 
 def display_substance_relationship():
-    """Display substance data by relationship name"""
     st.subheader("Substance Data by Relationship")
 
     # Get data with sample size limit
@@ -84,7 +73,6 @@ def display_substance_relationship():
     # Sort by count and limit to top N results
     df = df.sort_values("Count", ascending=False).head(st.session_state.top_n_results)
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -113,28 +101,22 @@ def display_substance_relationship():
         fig_pie.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # Show data table in collapsed expander
     with st.expander("View Relationship Data", expanded=False):
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # AI Insights section
     render_ai_insights_section(df, "substance relationships", "relationship")
 
 def display_substance_moiety():
-    """Display substance data by moiety name"""
     st.subheader("Substance Data by Moiety")
 
-    # Get data with sample size limit
     df = get_substance_by_moiety_name(st.session_state.sample_size)
 
     if df.empty:
         st.warning("No moiety data available.")
         return
 
-    # Sort by count and limit to top N results
     df = df.sort_values("Count", ascending=False).head(st.session_state.top_n_results)
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -169,24 +151,20 @@ def display_substance_moiety():
         filtered_df = df[df["Moiety"].str.contains(search_term, case=False)]
         st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     else:
-        # Show full data table
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # AI Insights section
     render_ai_insights_section(df, "substance moieties", "moiety")
 
 def display_nsde_analysis():
-    """Display NSDE data analysis"""
     st.subheader("NSDE Data Analysis")
 
-    # Create tabs for different NSDE analyses
     tab1, tab2, tab3 = st.tabs([
         "Product Type",
         "Marketing Category",
         "Route of Administration"
     ])
 
-    # Product Type Tab
+    # Product Type
     with tab1:
         st.subheader("NSDE Data by Product Type")
 
@@ -198,7 +176,6 @@ def display_nsde_analysis():
             # Sort by count and limit to top N results
             df = df.sort_values("Count", ascending=False).head(st.session_state.top_n_results)
 
-            # Create visualization
             fig = px.bar(
                 df,
                 x="Product Type",
@@ -211,13 +188,11 @@ def display_nsde_analysis():
             fig.update_traces(textposition='outside')
             st.plotly_chart(fig, use_container_width=True)
 
-            # Show data table
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-            # AI Insights section
             render_ai_insights_section(df, "NSDE product types", "nsde_product")
 
-    # Marketing Category Tab
+    # Marketing Category
     with tab2:
         st.subheader("NSDE Data by Marketing Category")
 
@@ -229,7 +204,6 @@ def display_nsde_analysis():
             # Sort by count and limit to top N results
             df = df.sort_values("Count", ascending=False).head(st.session_state.top_n_results)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -258,10 +232,8 @@ def display_nsde_analysis():
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # Show data table
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-            # AI Insights section
             render_ai_insights_section(df, "NSDE marketing categories", "nsde_marketing")
 
     # Route of Administration Tab
@@ -276,7 +248,6 @@ def display_nsde_analysis():
             # Sort by count and limit to top N results
             df = df.sort_values("Count", ascending=False).head(st.session_state.top_n_results)
 
-            # Create visualization
             fig = px.bar(
                 df,
                 x="Route",
@@ -289,24 +260,19 @@ def display_nsde_analysis():
             fig.update_traces(textposition='outside')
             st.plotly_chart(fig, use_container_width=True)
 
-            # Show data table
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-            # AI Insights section
             render_ai_insights_section(df, "NSDE routes of administration", "nsde_route")
 
 def display_other_data():
-    """Main function to display the Other Data page"""
     st.title("Other FDA Data Analysis")
 
-    # Create tabs for different data categories
     tab1, tab2 = st.tabs([
         "Substance Analysis",
         "NSDE Analysis"
     ])
 
     with tab1:
-        # Create subtabs for substance analysis
         subtab1, subtab2 = st.tabs(["Relationships", "Moieties"])
 
         with subtab1:

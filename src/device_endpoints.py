@@ -1,13 +1,9 @@
 import pandas as pd
 import streamlit as st
-from datetime import datetime
-from typing import Optional, Dict, List, Any
 
 from src.data_utils import (
     fetch_with_cache,
     get_count_data,
-    fetch_all_pages,
-    search_records,
     format_date_range
 )
 
@@ -24,10 +20,9 @@ DEVICE_COVID19_ENDPOINT = "device/covid19serology.json"
 
 @st.cache_data(ttl=3600)
 def get_device_events_by_type(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device adverse events by event type"""
     search_params = {}
 
-    # Add date range if provided
+    # Adds date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"date_received:{date_range}"
@@ -55,10 +50,8 @@ def get_device_events_by_type(start_date=None, end_date=None, limit: int = 100) 
 
 @st.cache_data(ttl=3600)
 def get_device_events_by_manufacturer(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device adverse events by manufacturer"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"date_received:{date_range}"
@@ -79,10 +72,8 @@ def get_device_events_by_manufacturer(start_date=None, end_date=None, limit: int
 
 @st.cache_data(ttl=3600)
 def get_device_events_by_product_code(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device adverse events by product code"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"date_received:{date_range}"
@@ -103,7 +94,7 @@ def get_device_events_by_product_code(start_date=None, end_date=None, limit: int
             "2": "Class II (Moderate Risk)",
             "3": "Class III (High Risk)",
             "U": "Unclassified",
-            "F": "HDE"  # Humanitarian Device Exemption
+            "F": "HDE"
         }
         df["Device Class"] = df["Device Class"].map(lambda x: class_map.get(x, x))
 
@@ -111,10 +102,8 @@ def get_device_events_by_product_code(start_date=None, end_date=None, limit: int
 
 @st.cache_data(ttl=3600)
 def get_device_events_by_medical_specialty(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device adverse events by medical specialty"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"date_received:{date_range}"
@@ -133,10 +122,8 @@ def get_device_events_by_medical_specialty(start_date=None, end_date=None, limit
 
 @st.cache_data(ttl=3600)
 def get_device_510k_by_applicant(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get 510(k) clearances by applicant"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"decision_date:{date_range}"
@@ -157,10 +144,8 @@ def get_device_510k_by_applicant(start_date=None, end_date=None, limit: int = 10
 
 @st.cache_data(ttl=3600)
 def get_device_510k_decision_over_time(interval: str = "year", start_date=None, end_date=None) -> pd.DataFrame:
-    """Get 510(k) decisions over time"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"decision_date:{date_range}"
@@ -173,7 +158,7 @@ def get_device_510k_decision_over_time(interval: str = "year", start_date=None, 
     else:
         count_field = "decision_date.year"
 
-    # Also get decision results
+    # get decision results
     decision_data = get_count_data(
         DEVICE_510K_ENDPOINT,
         "decision_description.exact",
@@ -191,7 +176,7 @@ def get_device_510k_decision_over_time(interval: str = "year", start_date=None, 
     if not time_data.empty:
         time_data.columns = ["Time Period", "Count"]
 
-        # Format time period for readability
+        # time period formated for readability
         if interval == "month":
             month_names = {
                 "1": "January", "2": "February", "3": "March", "4": "April",
@@ -207,10 +192,8 @@ def get_device_510k_decision_over_time(interval: str = "year", start_date=None, 
 
 @st.cache_data(ttl=3600)
 def get_device_recalls_by_class(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device recalls by classification"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"event_date_initiated:{date_range}"
@@ -258,10 +241,8 @@ def get_device_recalls_by_class(start_date=None, end_date=None, limit: int = 100
 
 @st.cache_data(ttl=3600)
 def get_device_recalls_by_product_class(start_date=None, end_date=None, limit: int = 100) -> pd.DataFrame:
-    """Get device recalls by product classification"""
     search_params = {}
 
-    # Add date range if provided
     if start_date and end_date:
         date_range = format_date_range(start_date, end_date)
         search_params["search"] = f"event_date_initiated:{date_range}"
@@ -282,7 +263,6 @@ def get_device_recalls_by_product_class(start_date=None, end_date=None, limit: i
             "2": "Class II (Moderate Risk)",
             "3": "Class III (High Risk)",
             "U": "Unclassified",
-            "F": "HDE"  # Humanitarian Device Exemption
         }
         df["Device Class"] = df["Device Class"].map(lambda x: class_map.get(x, x))
 
@@ -290,7 +270,6 @@ def get_device_recalls_by_product_class(start_date=None, end_date=None, limit: i
 
 @st.cache_data(ttl=3600)
 def get_device_covid19_tests(limit: int = 100) -> pd.DataFrame:
-    """Get COVID-19 serological testing evaluations"""
     search_params = {
         "limit": str(limit)
     }

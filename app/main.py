@@ -4,7 +4,6 @@ import sys
 import os
 from datetime import datetime, date
 
-# Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.device_page import display_device_reports
@@ -20,7 +19,6 @@ def display_home():
     # Global Controls Section
     st.header("Global Controls")
 
-    # Create two columns for controls
     col1, col2 = st.columns(2)
 
     with col1:
@@ -93,14 +91,13 @@ def display_home():
     """)
 
 def main():
-    """Main function to run the Streamlit app."""
     st.set_page_config(
         page_title="FDA Data Analysis Dashboard",
-        page_icon="🏥",
+        page_icon="",
         layout="wide"
     )
 
-    # Initialize session state variables if they don't exist
+    # Initializing session state variables if they don't exist
     if "sample_size" not in st.session_state:
         st.session_state.sample_size = 1000
     if "top_n_results" not in st.session_state:
@@ -155,21 +152,17 @@ def main():
             key="sidebar_end_date"
         )
 
-        # Display current settings
         st.subheader("Current Settings")
         st.write(f"Sample Size: {st.session_state.sample_size:,} records")
         st.write(f"Top N Results: {st.session_state.top_n_results}")
         st.write(f"Date Range: {st.session_state.start_date} to {st.session_state.end_date}")
 
-        # Add data source information
         st.subheader("Data Source")
         st.write("All data is retrieved in real-time from the [OpenFDA API](https://open.fda.gov/apis/).")
 
-        # Add app metadata
         st.subheader("About")
         st.write("Created with Streamlit & OpenFDA API © 2024")
 
-        # Add clear cache button to the bottom of the sidebar
         st.subheader("Troubleshooting")
         st.caption("If you get a value error of any kind, try connecting to the internet again or use a vpn if available")
         st.caption("If data is not loading or tables appear broken, try clearing the cache.")
@@ -180,7 +173,6 @@ def main():
     # Main content area
     st.title("Data Analysis Dashboard")
 
-    # Create tabs for different sections
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "Overview",
         "Drug Reports",

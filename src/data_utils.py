@@ -11,7 +11,7 @@ from functools import lru_cache
 from datetime import datetime, timedelta
 import logging
 
-# Configure logging
+# logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("openfda")
 
@@ -20,7 +20,7 @@ BASE_URL = "https://api.fda.gov/"
 API_KEY = os.getenv("OPENFDA_API_KEY", "")
 
 # Cache control
-CACHE_TTL = 3600  # Cache time-to-live in seconds (1 hour)
+CACHE_TTL = 3600 # time to live = 1hr
 cache_data = {}
 cache_timestamps = {}
 
@@ -30,21 +30,18 @@ request_queue = queue.Queue()
 response_queue = queue.Queue()
 
 class APIRateLimiter:
-    """Rate limiter for API requests to avoid hitting rate limits"""
     def __init__(self, requests_per_min=120):
         self.requests_per_min = requests_per_min
         self.request_times = []
         self.lock = threading.Lock()
 
     def wait_if_needed(self):
-        """Wait if we're exceeding the rate limit"""
         with self.lock:
             now = time.time()
             # Remove timestamps older than 1 minute
             self.request_times = [t for t in self.request_times if now - t < 60]
 
             if len(self.request_times) >= self.requests_per_min:
-                # We need to wait
                 oldest = self.request_times[0]
                 wait_time = 60 - (now - oldest)
                 if wait_time > 0:
@@ -57,16 +54,14 @@ class APIRateLimiter:
 rate_limiter = APIRateLimiter()
 
 def worker():
-    """Worker thread for API requests"""
     while True:
         try:
             task = request_queue.get()
-            if task is None:  # Sentinel to stop the thread
+            if task is None:
                 break
 
             endpoint, params, cache_key = task
 
-            # Check if we need to rate-limit
             rate_limiter.wait_if_needed()
 
             # Make the API request
@@ -103,7 +98,6 @@ def start_workers():
 start_workers()
 
 def fetch_with_cache(endpoint: str, params: Optional[Dict] = None, force_refresh: bool = False) -> Dict:
-    """Fetch data from the API with caching"""
     # Create a cache key from the endpoint and params
     params_str = json.dumps(params, sort_keys=True) if params else ""
     cache_key = f"{endpoint}_{params_str}"
@@ -138,10 +132,9 @@ def fetch_with_cache(endpoint: str, params: Optional[Dict] = None, force_refresh
             return {"error": "Timeout waiting for response"}
 
 def fetch_all_pages(endpoint: str, params: Dict, count_field: str, max_records: int = 1000) -> List[Dict]:
-    """Fetch all pages of data up to max_records"""
     all_results = []
     current_params = params.copy()
-    limit = min(100, max_records)  # API limit is 100 per request
+    limit = min(100, max_records)
 
     if "limit" not in current_params:
         current_params["limit"] = str(limit)
@@ -158,14 +151,13 @@ def fetch_all_pages(endpoint: str, params: Dict, count_field: str, max_records: 
         all_results.extend(results)
         skip += len(results)
 
-        if len(results) < limit:  # No more results
+        if len(results) < limit:
             break
 
     return all_results[:max_records]
 
 def get_count_data(endpoint: str, count_field: str, search_params: Optional[Dict] = None,
                   limit: int = 100) -> pd.DataFrame:
-    """Get count data from an endpoint"""
     params = search_params.copy() if search_params else {}
     params["count"] = count_field
     params["limit"] = str(limit)
@@ -183,7 +175,6 @@ def get_count_data(endpoint: str, count_field: str, search_params: Optional[Dict
 
 def search_records(endpoint: str, search_query: str, limit: int = 100,
                   additional_params: Optional[Dict] = None) -> List[Dict]:
-    """Search for records using a specific query"""
     params = {"search": search_query, "limit": str(limit)}
     if additional_params:
         params.update(additional_params)
@@ -196,30 +187,14 @@ def search_records(endpoint: str, search_query: str, limit: int = 100,
     return data["results"]
 
 def format_date_range(start_date, end_date):
-    """Format date range for FDA API queries"""
     start_str = start_date.strftime('%Y%m%d')
     end_str = end_date.strftime('%Y%m%d')
     return f"[{start_str}+TO+{end_str}]"
 
 def get_safe_limit(limit):
-    """Get a safe limit value for API calls.
-
-    This function ensures that:
-    1. The limit is converted to an integer if it's not already
-    2. The limit is capped at 1000 for single API calls to prevent excessive
-       resource usage or API rate limiting
-    3. The function returns a string, which is what the API expects
-
-    Args:
-        limit: The requested limit, can be None, a string, or a number
-
-    Returns:
-        A string representation of the limit, safely capped
-    """
     # Default limit if none provided
     if limit is None:
         if "sample_size" in st.session_state:
-            # Use global sample size if available, but cap at 100 for single calls
             limit = min(st.session_state.sample_size, 100)
         else:
             # Conservative default
@@ -232,14 +207,12 @@ def get_safe_limit(limit):
         # Fall back to default if conversion fails
         limit = 100
 
-    # Cap at 100 for single API calls (pagination is handled separately)
     limit = min(limit, 100)
 
     # Return as string for API parameters
     return str(limit)
 
 def clear_cache():
-    """Clear the API cache"""
     cache_data.clear()
     cache_timestamps.clear()
     logger.info("Cache cleared")

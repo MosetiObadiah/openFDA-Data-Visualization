@@ -5,7 +5,6 @@ from datetime import date
 from typing import Tuple, Optional
 
 def render_metric_header(title: str, description: str) -> None:
-    """Render a metric's subheader and description."""
     st.subheader(title)
     st.write(description)
 
@@ -16,7 +15,6 @@ def render_date_picker(
     default_end: date = date(2025, 1, 31),
     key_prefix: str = ""
 ) -> Tuple[str, str]:
-    """Render side-by-side date pickers for selecting a date range."""
     col1, col2 = st.columns(2)
     with col1:
         start = st.date_input(
@@ -37,12 +35,10 @@ def render_date_picker(
     return start.strftime("%Y%m%d"), end.strftime("%Y%m%d")
 
 def render_data_table(df: pd.DataFrame, width: int = 500, expanded: bool = True) -> None:
-    """Render a DataFrame as an expandable table."""
     with st.expander("See raw table data", expanded=expanded):
         st.dataframe(data=df, width=width, use_container_width=False)
 
 def render_age_filter(df: pd.DataFrame, column: str = "Patient Age") -> pd.DataFrame:
-    """Render a slider to filter data by age and return the filtered DataFrame."""
     min_age = int(df[column].min())
     max_age = int(df[column].max())
     age_range = st.slider(
@@ -62,7 +58,6 @@ def render_bar_chart(
     x_label: str,
     y_label: str
 ) -> None:
-    """Render a bar chart using Plotly."""
     fig = px.bar(
         df,
         x=x_col,
@@ -80,7 +75,6 @@ def render_line_chart(
     x_label: str,
     y_label: str
 ) -> None:
-    """Render a line chart using Plotly."""
     fig = px.line(
         df,
         x=x_col,

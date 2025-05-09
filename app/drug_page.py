@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
@@ -10,48 +9,21 @@ import plotly.graph_objects as go
 from src.drug_events import (
     adverse_events_by_patient_age_group_within_data_range,
     adverse_events_by_drug_within_data_range,
-    recall_frequency_by_year,
-    most_common_recalled_drugs,
-    recall_reasons_over_time,
-    get_top_drugs,
-    get_recall_reasons_pivot,
     get_actions_taken_with_drug,
     adverse_events_by_country,
     get_drug_events_by_substance,
-    get_drug_events_by_action,
     get_drug_events_by_patient_sex,
     get_drug_events_by_patient_weight,
-    get_drug_events_by_reaction_outcome,
-    get_drug_events_by_reporter_qualification,
     get_top_drug_reactions,
     get_drug_indications,
     get_drug_manufacturer_distribution,
     get_drug_therapeutic_response
-)
-from src.utils import get_state_abbreviations
-from src.components import (
-    render_metric_header,
-    render_date_picker,
-    render_data_table,
-    render_age_filter,
-    render_bar_chart,
-    render_line_chart
 )
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def get_insights_from_data(df, context: str, custom_question: str = None) -> str:
-    """Generate insights from data using Gemini.
-
-    Parameters:
-        df: Either a DataFrame or a dictionary containing DataFrames
-        context: The context of the data for the prompt
-        custom_question: Optional specific question to answer
-
-    Returns:
-        String containing generated insights or error message
-    """
     # Handle empty data
     if df is None:
         return "No data available for insights."
@@ -108,10 +80,9 @@ def render_ai_insights_section(df, context, key_prefix):
             st.write(get_insights_from_data(df, context, question or ""))
 
 def display_adverse_events_by_age():
-    """Display adverse events by age group."""
     st.subheader("Adverse Events by Age Group")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -122,7 +93,6 @@ def display_adverse_events_by_age():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -147,18 +117,15 @@ def display_adverse_events_by_age():
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display detailed statistics
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Adverse Events by Age Group", "age")
 
 def display_adverse_events_by_drug():
-    """Display adverse events by drug."""
     st.subheader("Adverse Events by Drug")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -194,18 +161,15 @@ def display_adverse_events_by_drug():
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display detailed statistics
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Adverse Events by Drug", "drug")
 
 def display_global_adverse_events():
-    """Display global adverse events distribution."""
     st.subheader("Global Adverse Events Distribution")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -245,14 +209,12 @@ def display_global_adverse_events():
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Global Adverse Events Distribution", "global")
 
 def display_actions_taken_with_drug():
-    """Display actions taken with drug data."""
     st.subheader("Actions Taken with Drug")
 
-    # Use global date range from session state
+    # global date range from session state
     start_str = st.session_state.start_date.strftime('%Y-%m-%d')
     end_str = st.session_state.end_date.strftime('%Y-%m-%d')
 
@@ -263,7 +225,6 @@ def display_actions_taken_with_drug():
         st.warning("No data available for the selected date range.")
         return
 
-    # Create visualizations
     col1, col2 = st.columns(2)
 
     with col1:
@@ -288,17 +249,15 @@ def display_actions_taken_with_drug():
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display detailed statistics
     st.subheader("Detailed Statistics")
     st.dataframe(df)
 
-    # AI Insights section
     render_ai_insights_section(df, "Actions Taken with Drug", "actions")
 
 def display_drug_reports():
     st.title("Drug Reports")
 
-    # Create tabs for different analysis sections
+    # Create tabs
     tab_names = [
         "Adverse Reactions",
         "Drug Indications",
@@ -309,7 +268,7 @@ def display_drug_reports():
     ]
     tabs = st.tabs(tab_names)
 
-    # 1. Adverse Reactions Tab
+    # Adverse Reactions Tab
     with tabs[0]:
         st.subheader("Top Adverse Reactions to Drugs")
         df_reactions = get_top_drug_reactions(
@@ -325,7 +284,6 @@ def display_drug_reports():
             top_n = st.slider("Number of top reactions to show", 5, 30, 15, key="drug_reaction_slider")
             top_df = df_reactions.head(top_n)
 
-            # Create visualizations - bar chart first, then pie chart
             # Bar chart for top N reactions
             fig_bar = px.bar(
                 top_df,
@@ -348,14 +306,12 @@ def display_drug_reports():
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-            # Display detailed statistics in an expander
             with st.expander("Detailed Reaction Statistics", expanded=False):
                 st.dataframe(df_reactions.style.highlight_max(subset=["Count"], color='lightgreen'))
 
-            # AI Insights section
             render_ai_insights_section(df_reactions, "Drug Adverse Reactions", "drug_reactions")
 
-    # 2. Drug Indications Tab
+    # Drug Indications Tab
     with tabs[1]:
         st.subheader("Common Drug Indications")
         df_indications = get_drug_indications(
@@ -371,7 +327,6 @@ def display_drug_reports():
             top_n = st.slider("Number of top indications to show", 5, 30, 15, key="drug_indications_slider")
             top_ind_df = df_indications.head(top_n)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -398,18 +353,15 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_area, use_container_width=True)
 
-            # Display detailed statistics in an expander
             with st.expander("Detailed Indication Statistics", expanded=False):
                 st.dataframe(df_indications.style.highlight_max(subset=["Count"], color='lightgreen'))
 
-            # AI Insights section
             render_ai_insights_section(df_indications, "Drug Indications", "drug_indications")
 
-    # 3. Patient Demographics Tab
+    # Patient Demographics Tab
     with tabs[2]:
         st.subheader("Patient Demographics")
 
-        # Create two columns for Sex and Weight
         col1, col2 = st.columns(2)
 
         with col1:
@@ -433,7 +385,7 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_sex, use_container_width=True)
 
-                # Table with counts and percentages (in an expander)
+                # Table with counts and percentages
                 with st.expander("View Sex Distribution Details", expanded=False):
                     st.dataframe(df_sex)
 
@@ -455,13 +407,12 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_weight, use_container_width=True)
 
-                # Table with weight data (in an expander)
+                # Table with weight data
                 with st.expander("View Weight Distribution Details", expanded=False):
                     st.dataframe(df_weight)
 
         # Add combined demographic data for AI insights
         if not df_sex.empty or not df_weight.empty:
-            # Combine data for insights or use just one dataset if the other is empty
             demographics_data = pd.DataFrame()
             if not df_sex.empty and not df_weight.empty:
                 # Create a simple combined dataset for insights
@@ -474,10 +425,9 @@ def display_drug_reports():
             else:
                 demographics_data = df_weight
 
-            # Add AI Insights section
             render_ai_insights_section(demographics_data, "Patient Demographics in Drug Events", "drug_demographics")
 
-    # 4. Manufacturers Tab
+    # Manufacturers Tab
     with tabs[3]:
         st.subheader("Drug Manufacturers")
         df_manufacturers = get_drug_manufacturer_distribution(
@@ -493,11 +443,10 @@ def display_drug_reports():
             top_n = st.slider("Number of top manufacturers to show", 5, 30, 15, key="drug_manufacturer_slider")
             top_mfr_df = df_manufacturers.head(top_n)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
-                # Bar chart for top manufacturers
+                # Bar chart
                 fig_mfr = px.bar(
                     top_mfr_df,
                     x="Count",
@@ -513,7 +462,7 @@ def display_drug_reports():
                 st.plotly_chart(fig_mfr, use_container_width=True)
 
             with col2:
-                # Pie chart for top manufacturers
+                # Pie chart
                 fig_pie_mfr = px.pie(
                     top_mfr_df,
                     values="Count",
@@ -527,7 +476,6 @@ def display_drug_reports():
             top5_share = (top_mfr_df.head(5)["Count"].sum() / total_count * 100).round(1)
             top10_share = (top_mfr_df.head(10)["Count"].sum() / total_count * 100).round(1)
 
-            # Show market concentration metrics
             st.subheader("Market Concentration")
             metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
             with metrics_col1:
@@ -537,14 +485,12 @@ def display_drug_reports():
             with metrics_col3:
                 st.metric("Top 10 Manufacturers Share", f"{top10_share}%")
 
-            # Display detailed statistics in an expander
             with st.expander("Detailed Manufacturer Statistics", expanded=False):
                 st.dataframe(df_manufacturers.style.highlight_max(subset=["Count"], color='lightgreen'))
 
-            # AI Insights section
             render_ai_insights_section(df_manufacturers, "Drug Manufacturers", "drug_manufacturers")
 
-    # 5. Therapeutic Response Tab
+    # Therapeutic Response Tab
     with tabs[4]:
         st.subheader("Therapeutic Response to Drugs")
         df_response = get_drug_therapeutic_response(
@@ -556,7 +502,6 @@ def display_drug_reports():
         if df_response.empty:
             st.warning("No therapeutic response data available.")
         else:
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -597,8 +542,7 @@ def display_drug_reports():
                 st.subheader("Effectiveness Analysis")
                 st.write(f"For every 1 report of positive therapeutic effect, there are {effectiveness_ratio} reports of negative effects.")
 
-                # Create a gauge chart for effectiveness score
-                # Scale from 0-10, lower is better (fewer negative reports per positive)
+                # A gauge chart for effectiveness score, scale from 0-10
                 effectiveness_score = min(10, effectiveness_ratio)
 
                 fig_gauge = go.Figure(go.Indicator(
@@ -623,14 +567,12 @@ def display_drug_reports():
 
                 st.plotly_chart(fig_gauge, use_container_width=True)
 
-            # Display detailed statistics in an expander
             with st.expander("Detailed Response Statistics", expanded=False):
                 st.dataframe(df_response.style.highlight_max(subset=["Count"], color='lightgreen'))
 
-            # AI Insights section
             render_ai_insights_section(df_response, "Therapeutic Responses to Drugs", "drug_responses")
 
-    # 6. Substances Tab
+    # Substances Tab
     with tabs[5]:
         st.subheader("Active Ingredient (Substance)")
         df_substance = get_drug_events_by_substance()
@@ -641,7 +583,6 @@ def display_drug_reports():
             top_n = st.slider("Number of top substances to show", 5, 30, 15, key="drug_substance_slider")
             top_df = df_substance.head(top_n)
 
-            # Create visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -670,9 +611,7 @@ def display_drug_reports():
                 )
                 st.plotly_chart(fig_all, use_container_width=True)
 
-            # Display detailed statistics in an expander
             with st.expander("Detailed Substance Statistics", expanded=False):
                 st.dataframe(df_substance.style.highlight_max(subset=["Count"], color='lightgreen'))
 
-            # AI Insights section
             render_ai_insights_section(df_substance, "Active Ingredients (Substances)", "drug_substance")

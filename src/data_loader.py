@@ -7,11 +7,12 @@ import streamlit as st
 
 load_dotenv()
 api_key = os.getenv("OPENFDA_API_KEY")
-print(f"API Key loaded: {'Yes' if api_key else 'No'}")  # Debug print for API key
+print(f"API Key loaded: {'Yes' if api_key else 'No'}")
 
 BASE_URL = "https://api.fda.gov/"
 
-@st.cache_data(ttl=3600)  # Cache results for 1 hour
+# Cache results for 1 hour
+@st.cache_data(ttl=3600)
 def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
     try:
         # Construct the full URL with base URL and parameters
@@ -20,7 +21,7 @@ def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
             query_string = "&".join(f"{k}={v}" for k, v in params.items())
             full_url += f"?{query_string}"
 
-        # Add API key if available
+        # Add API key
         full_url += f"{'&' if '?' in full_url else '?'}api_key={api_key}" if api_key else ""
 
         print(f"\nFetching data for: {params or 'unknown context'}")
@@ -30,10 +31,10 @@ def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
         print(f"Response Status Code: {response.status_code}")
         print(f"Response Headers: {dict(response.headers)}")
 
-        # Try to get response content for debugging
+        # get response content for debugging
         try:
             response_content = response.text
-            print(f"Response Content: {response_content[:500]}...")  # Print first 500 chars
+            print(f"Response Content: {response_content[:500]}...")
         except Exception as e:
             print(f"Could not get response content: {e}")
 

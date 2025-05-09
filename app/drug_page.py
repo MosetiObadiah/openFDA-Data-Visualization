@@ -41,11 +41,43 @@ from src.components import (
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str = None) -> str:
-    if df.empty:
+def get_insights_from_data(df, context: str, custom_question: str = None) -> str:
+    """Generate insights from data using Gemini.
+
+    Parameters:
+        df: Either a DataFrame or a dictionary containing DataFrames
+        context: The context of the data for the prompt
+        custom_question: Optional specific question to answer
+
+    Returns:
+        String containing generated insights or error message
+    """
+    # Handle empty data
+    if df is None:
         return "No data available for insights."
-    # Summarize the top rows for context
-    summary = df.head(10).to_string(index=False)
+
+    # Handle different data types
+    if isinstance(df, dict):
+        # Process dictionary of DataFrames
+        summaries = []
+        for key, value in df.items():
+            if hasattr(value, 'empty') and not value.empty:
+                summaries.append(f"{key.replace('_', ' ').title()}:\n{value.head(5).to_string(index=False)}")
+
+        if not summaries:
+            return "No data available for insights."
+
+        summary = "\n\n".join(summaries)
+    elif hasattr(df, 'empty'):
+        # Process single DataFrame
+        if df.empty:
+            return "No data available for insights."
+        summary = df.head(10).to_string(index=False)
+    else:
+        # Unknown data type
+        return "Cannot generate insights: unsupported data format."
+
+    # Create prompt based on available data
     if custom_question:
         prompt = (
             f"Given the following data about {context}:\n\n"
@@ -59,6 +91,8 @@ def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str 
             f"{summary}\n\n"
             "Provide a concise summary (3-5 sentences) of key trends, patterns, and notable findings."
         )
+
+    # Generate insights
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)

@@ -1,17 +1,11 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import sys
-import json
 import time
-import plotly.graph_objects as go
-import re
-import asyncio
 import concurrent.futures
-import threading
 
 # Add the project root directory to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -34,7 +28,7 @@ from src.tobacco_endpoints import (
 
 # Initialize session state for sample_size
 if "sample_size" not in st.session_state:
-    st.session_state.sample_size = 50  # Default sample size
+    st.session_state.sample_size = 1000  # Default sample size
 
 # Load API key for Gemini
 load_dotenv()
@@ -50,7 +44,7 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
     data_points = []
 
     # Use a smaller sample size for better performance
-    sample_size = 50  # Reduced from 100
+    sample_size = 1000  # Adjusted for consistency
 
     # Collect drug data if requested
     if include_drug:
@@ -120,166 +114,186 @@ def generate_healthcare_trends_summary(include_drug=True, include_food=True, inc
     except Exception as e:
         return f"Error generating healthcare trends summary: {e}"
 
-def extract_trend_data_for_visualization(prediction_text, trend_category):
-    """Extract data points from prediction text for visualization."""
-    # Default values
-    categories = []
-    values = []
-    confidence = 0.5  # Medium confidence default
-
-    # Try to extract a confidence level
-    confidence_match = re.search(r'confidence level[^\n.]*?(high|medium|low)', prediction_text.lower())
-    if confidence_match:
-        conf_level = confidence_match.group(1)
-        if conf_level == "high":
-            confidence = 0.8
-        elif conf_level == "medium":
-            confidence = 0.5
-        elif conf_level == "low":
-            confidence = 0.3
-
-    # Extract timeline information
-    short_term = re.search(r'short[- ]term[^\n.]*?(\d+)[^\n.]*?(increase|decrease|rise|decline|growth|reduction)', prediction_text.lower())
-    mid_term = re.search(r'mid[- ]term[^\n.]*?(\d+)[^\n.]*?(increase|decrease|rise|decline|growth|reduction)', prediction_text.lower())
-    long_term = re.search(r'long[- ]term[^\n.]*?(\d+)[^\n.]*?(increase|decrease|rise|decline|growth|reduction)', prediction_text.lower())
-
-    # Create timeline data
-    if trend_category == "Drug Safety":
-        categories = ["Current", "Short-term", "Mid-term", "Long-term"]
-        # Default starting value based on category
-        base_value = 100
-        values = [base_value]
-
-        # Process timeline values
-        for match in [short_term, mid_term, long_term]:
-            if match:
-                pct = int(match.group(1)) if match.group(1).isdigit() else 10
-                direction = 1 if match.group(2) in ["increase", "rise", "growth"] else -1
-                values.append(values[-1] * (1 + direction * pct/100))
-            else:
-                # Default change if not specified
-                values.append(values[-1] * (1 + 0.05 * (1 if len(values) % 2 == 0 else -1)))
-
-    elif trend_category == "Food Safety":
-        categories = ["Current", "Short-term", "Mid-term", "Long-term"]
-        base_value = 75
-        values = [base_value]
-
-        for match in [short_term, mid_term, long_term]:
-            if match:
-                pct = int(match.group(1)) if match.group(1).isdigit() else 8
-                direction = 1 if match.group(2) in ["increase", "rise", "growth"] else -1
-                values.append(values[-1] * (1 + direction * pct/100))
-            else:
-                values.append(values[-1] * (1 + 0.04 * (1 if len(values) % 2 == 0 else -1)))
-
-    elif trend_category == "Tobacco Effects":
-        categories = ["Current", "Short-term", "Mid-term", "Long-term"]
-        base_value = 50
-        values = [base_value]
-
-        for match in [short_term, mid_term, long_term]:
-            if match:
-                pct = int(match.group(1)) if match.group(1).isdigit() else 12
-                direction = 1 if match.group(2) in ["increase", "rise", "growth"] else -1
-                values.append(values[-1] * (1 + direction * pct/100))
-            else:
-                values.append(values[-1] * (1 + 0.06 * (1 if len(values) % 2 == 0 else -1)))
-
-    # Extract key factors if available
-    key_factors = []
-    factors_section = re.search(r'key factors[^\n]*:(.*?)(\n\d|\n\n|$)', prediction_text.lower(), re.DOTALL)
-    if factors_section:
-        factors_text = factors_section.group(1)
-        for line in factors_text.split('\n'):
-            if line.strip() and line.strip()[0].isdigit() or line.strip()[0] == '-':
-                factor = line.strip()
-                if len(factor) > 5:  # Make sure it's not just a number or dash
-                    key_factors.append(factor)
-
-    return {
-        "categories": categories,
-        "values": values,
-        "confidence": confidence,
-        "key_factors": key_factors
-    }
-
 @st.cache_data(ttl=3600)
 def generate_trend_prediction(trend_category, prediction_question):
     """Generate a prediction about a specific healthcare trend using Gemini."""
 
     # Use a smaller sample size for better performance
-    sample_size = 50  # Reduced from 100
+    sample_size = 1000  # Adjusted for consistency
 
     # Initialize data collection based on trend category
     data_points = []
+    data_available = False
+
+    # Identify keywords in the question to determine which data to fetch
+    question_lower = prediction_question.lower()
 
     if trend_category == "Drug Safety":
         try:
-            drug_events = adverse_events_by_drug_within_data_range("2020-01-01", "2023-12-31", sample_size)
-            drug_recalls = most_common_recalled_drugs(limit=sample_size)
+            # Check for specific keywords to determine which drug data to fetch
+            fetched_data = False
 
-            if not drug_events.empty:
-                data_points.append(f"Top drugs with adverse events:\n{drug_events.head(5).to_string(index=False)}")
+            # Adverse events data
+            if any(keyword in question_lower for keyword in ["adverse", "side effect", "reaction", "event"]):
+                drug_events = adverse_events_by_drug_within_data_range("2020-01-01", "2023-12-31", sample_size)
+                if not drug_events.empty:
+                    data_points.append(f"Top drugs with adverse events:\n{drug_events.to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
 
-            if not drug_recalls.empty:
-                data_points.append(f"Top recalled drugs:\n{drug_recalls.head(5).to_string(index=False)}")
+            # Recall data
+            if any(keyword in question_lower for keyword in ["recall", "withdraw", "safety", "enforcement"]):
+                drug_recalls = most_common_recalled_drugs(limit=sample_size)
+                if not drug_recalls.empty:
+                    data_points.append(f"Top recalled drugs:\n{drug_recalls.to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
+
+            # If no specific data matched keywords, fetch general data
+            if not fetched_data:
+                drug_events = adverse_events_by_drug_within_data_range("2020-01-01", "2023-12-31", sample_size)
+                drug_recalls = most_common_recalled_drugs(limit=sample_size)
+
+                if not drug_events.empty:
+                    data_points.append(f"Top drugs with adverse events:\n{drug_events.head(5).to_string(index=False)}")
+                    data_available = True
+
+                if not drug_recalls.empty:
+                    data_points.append(f"Top recalled drugs:\n{drug_recalls.head(5).to_string(index=False)}")
+                    data_available = True
+
         except Exception as e:
             data_points.append(f"Drug data extraction error: {str(e)}")
 
     elif trend_category == "Food Safety":
         try:
-            food_recalls = get_food_recalls_by_classification(None, None, sample_size)
-            food_reasons = get_food_recalls_by_reason(None, None, sample_size)
+            # Check for specific keywords to determine which food data to fetch
+            fetched_data = False
 
-            if not food_recalls.empty:
-                data_points.append(f"Food recall classifications:\n{food_recalls.to_string(index=False)}")
+            # Food classification data
+            if any(keyword in question_lower for keyword in ["class", "classification", "category", "type"]):
+                food_recalls = get_food_recalls_by_classification(None, None, sample_size)
+                if not food_recalls.empty:
+                    data_points.append(f"Food recall classifications:\n{food_recalls.to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
 
-            if isinstance(food_reasons, dict) and "categorized" in food_reasons and not food_reasons["categorized"].empty:
-                data_points.append(f"Food recall reasons:\n{food_reasons['categorized'].head(5).to_string(index=False)}")
+            # Food recall reason data
+            if any(keyword in question_lower for keyword in ["reason", "cause", "why", "contamination", "allergen"]):
+                food_reasons = get_food_recalls_by_reason(None, None, sample_size)
+                if isinstance(food_reasons, dict) and "categorized" in food_reasons and not food_reasons["categorized"].empty:
+                    data_points.append(f"Food recall reasons:\n{food_reasons['categorized'].to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
+
+            # If no specific data matched keywords, fetch general data
+            if not fetched_data:
+                food_recalls = get_food_recalls_by_classification(None, None, sample_size)
+                food_reasons = get_food_recalls_by_reason(None, None, sample_size)
+
+                if not food_recalls.empty:
+                    data_points.append(f"Food recall classifications:\n{food_recalls.head(5).to_string(index=False)}")
+                    data_available = True
+
+                if isinstance(food_reasons, dict) and "categorized" in food_reasons and not food_reasons["categorized"].empty:
+                    data_points.append(f"Food recall reasons:\n{food_reasons['categorized'].head(5).to_string(index=False)}")
+                    data_available = True
+
         except Exception as e:
             data_points.append(f"Food data extraction error: {str(e)}")
 
     elif trend_category == "Tobacco Effects":
         try:
-            tobacco_effects = get_tobacco_reports_by_health_effect(None, None, sample_size)
-            tobacco_products = get_tobacco_reports_by_product(None, None, sample_size)
+            # Check for specific keywords to determine which tobacco data to fetch
+            fetched_data = False
 
-            if isinstance(tobacco_effects, dict) and "categorized" in tobacco_effects and not tobacco_effects["categorized"].empty:
-                data_points.append(f"Tobacco health effects:\n{tobacco_effects['categorized'].head(5).to_string(index=False)}")
+            # Health effects data
+            if any(keyword in question_lower for keyword in ["health", "effect", "impact", "symptom", "condition"]):
+                tobacco_effects = get_tobacco_reports_by_health_effect(None, None, sample_size)
+                if isinstance(tobacco_effects, dict) and "categorized" in tobacco_effects and not tobacco_effects["categorized"].empty:
+                    data_points.append(f"Tobacco health effects:\n{tobacco_effects['categorized'].to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
 
-            if isinstance(tobacco_products, dict) and "categorized" in tobacco_products and not tobacco_products["categorized"].empty:
-                data_points.append(f"Tobacco products:\n{tobacco_products['categorized'].head(5).to_string(index=False)}")
+            # Product data
+            if any(keyword in question_lower for keyword in ["product", "cigarette", "vape", "cigar", "smokeless"]):
+                tobacco_products = get_tobacco_reports_by_product(None, None, sample_size)
+                if isinstance(tobacco_products, dict) and "categorized" in tobacco_products and not tobacco_products["categorized"].empty:
+                    data_points.append(f"Tobacco products:\n{tobacco_products['categorized'].to_string(index=False)}")
+                    fetched_data = True
+                    data_available = True
+
+            # If no specific data matched keywords, fetch general data
+            if not fetched_data:
+                tobacco_effects = get_tobacco_reports_by_health_effect(None, None, sample_size)
+                tobacco_products = get_tobacco_reports_by_product(None, None, sample_size)
+
+                if isinstance(tobacco_effects, dict) and "categorized" in tobacco_effects and not tobacco_effects["categorized"].empty:
+                    data_points.append(f"Tobacco health effects:\n{tobacco_effects['categorized'].head(5).to_string(index=False)}")
+                    data_available = True
+
+                if isinstance(tobacco_products, dict) and "categorized" in tobacco_products and not tobacco_products["categorized"].empty:
+                    data_points.append(f"Tobacco products:\n{tobacco_products['categorized'].head(5).to_string(index=False)}")
+                    data_available = True
+
         except Exception as e:
             data_points.append(f"Tobacco data extraction error: {str(e)}")
 
-    # If no data was collected, return an error message
-    if not data_points:
-        return "No data available to generate a prediction."
+    # Create a targeted prompt for trend prediction based on whether we have data
+    if data_available:
+        # Create prompt with the data we've collected
+        prompt = f"""
+        You are a healthcare data analyst and forecaster specializing in FDA data analysis.
 
-    # Create a targeted prompt for trend prediction
-    prompt = f"""
-    You are a healthcare data analyst and forecaster who specializes in FDA data.
+        Based on the following {trend_category} data that I'm providing:
 
-    Based on the following {trend_category} data:
+        {"".join(f"{data}\n\n" for data in data_points)}
 
-    {"".join(f"{data}\n\n" for data in data_points)}
+        Answer this specific question about future trends:
+        "{prediction_question}"
 
-    Answer this specific question about future trends:
-    "{prediction_question}"
+        If you need additional data beyond what's provided, you may search for and analyze more comprehensive FDA data from the OpenFDA API endpoints.
 
-    Provide:
-    1. A detailed prediction with reasoning (2-3 paragraphs)
-    2. Key factors that could influence this trend (list at least 3-5 factors)
-    3. Potential timeline for these developments with percentages:
-       - Short-term (1-2 years): Specify expected change in percentage (e.g., 15% increase, 10% decrease)
-       - Mid-term (3-5 years): Specify expected change in percentage
-       - Long-term (5+ years): Specify expected change in percentage
-    4. Confidence level in your prediction (high, medium, or low) with explanation
+        Provide:
+        1. A substantive and detailed prediction with reasoning (2-3 paragraphs) based on the provided data and any additional data you find necessary
+        2. Key factors that could influence this trend (list at least 3-5 factors)
+        3. Confidence level in your prediction (high, medium, or low) with explanation
+        4. Summary of the data sources and evidence that informed your prediction
 
-    Base your predictions on observable patterns in the data, known regulatory trends,
-    scientific developments, and healthcare industry dynamics.
-    """
+        Your response MUST be substantive and data-driven. Never claim that you cannot make a prediction due to insufficient data.
+        """
+    else:
+        # Create prompt instructing to search for data
+        prompt = f"""
+        You are a healthcare data analyst and forecaster specializing in FDA data analysis.
+
+        I don't have specific data to provide for your question about {trend_category}:
+        "{prediction_question}"
+
+        Please actively search for and analyze comprehensive FDA data from the OpenFDA API endpoints, including but not limited to:
+        - https://api.fda.gov/drug/event.json (adverse drug events)
+        - https://api.fda.gov/drug/enforcement.json (drug recalls and enforcement actions)
+        - https://api.fda.gov/food/enforcement.json (food recalls and safety data)
+        - https://api.fda.gov/tobacco/problem.json (tobacco products reports)
+        - Utilize other relevant OpenFDA endpoints as needed
+
+        When analyzing OpenFDA data, consider:
+        - Historical trends over the past 5-10 years
+        - Changes in reporting frequencies
+        - Geographic patterns
+        - Demographic factors
+        - Regulatory actions and their outcomes
+
+        Also supplement with your knowledge of current scientific literature, research trends, and regulatory developments in the healthcare field.
+
+        Provide:
+        1. A substantive and detailed prediction with reasoning (2-3 paragraphs) based on the data you find
+        2. Key factors that could influence this trend (list at least 3-5 factors)
+        3. Confidence level in your prediction (high, medium, or low) with explanation
+        4. Summary of the data sources and evidence that informed your prediction
+
+        Your response MUST be substantive and data-driven. Never claim that you cannot make a prediction due to insufficient data.
+        """
 
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
@@ -288,7 +302,7 @@ def generate_trend_prediction(trend_category, prediction_question):
     except Exception as e:
         return f"Error generating trend prediction: {e}"
 
-def load_data_concurrently(trend_category, sample_size=50):
+def load_data_concurrently(trend_category, sample_size=1000):
     """Load data concurrently to speed up the process."""
     data_results = {}
 
@@ -333,133 +347,49 @@ def load_data_concurrently(trend_category, sample_size=50):
 
     return data_results
 
-def create_prediction_chart(prediction_data, trend_category, question):
-    """Create a chart visualization based on prediction data."""
-    # Create timeline chart
-    fig = go.Figure()
-
-    # Add the main trend line
-    fig.add_trace(go.Scatter(
-        x=prediction_data["categories"],
-        y=prediction_data["values"],
-        mode='lines+markers',
-        name='Predicted Trend',
-        line=dict(color='royalblue', width=4),
-        marker=dict(size=10)
-    ))
-
-    # Add confidence interval
-    confidence = prediction_data["confidence"]
-    upper_values = [val * (1 + (1 - confidence) * 0.5) for val in prediction_data["values"]]
-    lower_values = [val * (1 - (1 - confidence) * 0.5) for val in prediction_data["values"]]
-
-    # Add confidence band
-    fig.add_trace(go.Scatter(
-        x=prediction_data["categories"] + prediction_data["categories"][::-1],
-        y=upper_values + lower_values[::-1],
-        fill='toself',
-        fillcolor='rgba(0, 176, 246, 0.2)',
-        line=dict(color='rgba(255, 255, 255, 0)'),
-        hoverinfo="skip",
-        showlegend=False
-    ))
-
-    # Update layout
-    timeline_title = {
-        "Drug Safety": "Projected Trend for Drug Safety Events",
-        "Food Safety": "Projected Trend for Food Safety Events",
-        "Tobacco Effects": "Projected Trend for Tobacco Health Effects"
-    }.get(trend_category, "Projected Trend")
-
-    fig.update_layout(
-        title=f"{timeline_title}<br><sup>{question}</sup>",
-        xaxis_title="Time Period",
-        yaxis_title="Relative Trend (Baseline = 100)",
-        legend_title="Prediction",
-        template="plotly_white",
-        height=500
-    )
-
-    # Add key factors as annotations if available
-    if prediction_data["key_factors"]:
-        fig.add_annotation(
-            x=prediction_data["categories"][-2],
-            y=min(prediction_data["values"]),
-            text="<br>".join(["Key Factors:"] + prediction_data["key_factors"][:3]),
-            showarrow=True,
-            arrowhead=1,
-            ax=-50,
-            ay=40,
-            bgcolor="rgba(255, 255, 255, 0.8)",
-            bordercolor="rgba(0, 0, 0, 0.3)",
-            borderwidth=1,
-            borderpad=4,
-            font=dict(size=10)
-        )
-
-    return fig
-
 def display_healthcare_trends():
     """Display healthcare trends analysis page."""
     st.title("Healthcare Trends Analysis")
 
     # Ensure sample_size is initialized
     if "sample_size" not in st.session_state:
-        st.session_state.sample_size = 50
+        st.session_state.sample_size = 1000
 
     st.write("""
-    This tool uses AI to predict how specific healthcare trends might evolve in the future based on FDA data patterns.
-    Select a trend category and ask a specific question about future developments.
+    This tool uses AI to predict how healthcare trends might evolve in the future based on FDA data patterns.
+    Ask a specific question about future developments in drug safety, food safety, or tobacco effects.
     """)
 
-    # Trend category selection
-    trend_category = st.selectbox(
-        "Select Trend Category",
-        options=["Drug Safety", "Food Safety", "Tobacco Effects"],
-        index=0,
-        key="trend_category"
-    )
-
-    # Pre-load data in the background
+    # Pre-load data for all categories in the background
     if "preloaded_data" not in st.session_state:
         st.session_state.preloaded_data = {}
 
-    # Start background loading for the selected category
-    if trend_category not in st.session_state.preloaded_data:
-        with st.spinner(f"Pre-loading {trend_category} data..."):
-            st.session_state.preloaded_data[trend_category] = load_data_concurrently(trend_category, st.session_state.sample_size)
+    # Start background loading for all categories if not already loaded
+    categories = ["Drug Safety", "Food Safety", "Tobacco Effects"]
+    for category in categories:
+        if category not in st.session_state.preloaded_data:
+            with st.spinner(f"Pre-loading {category} data..."):
+                st.session_state.preloaded_data[category] = load_data_concurrently(category, st.session_state.sample_size)
 
     # Prediction question input
     st.markdown("### Ask About Future Trends")
 
-    # Provide example questions based on the selected category
-    example_questions = {
-        "Drug Safety": [
-            "How will adverse events for antidepressants trend over the next 5 years?",
-            "What new drug safety regulations might emerge in response to current recall patterns?",
-            "Will drug recalls for cardiovascular medications increase or decrease in the coming decade?"
-        ],
-        "Food Safety": [
-            "How will allergen-related food recalls change in the next 3 years?",
-            "What food categories are likely to see increased regulatory scrutiny based on recall patterns?",
-            "Will microbial contamination continue to be a leading cause of food recalls?"
-        ],
-        "Tobacco Effects": [
-            "How might the health effects of electronic cigarettes evolve in the next decade?",
-            "What new tobacco product categories might emerge and what health risks might they present?",
-            "Will respiratory issues from tobacco products increase or decrease in the coming years?"
-        ]
-    }
+    # Provide future-oriented example questions
+    example_questions = [
+        "How will the landscape of cardiovascular drug safety evolve over the next decade?",
+        "What will food safety regulations look like in 10 years for allergen management?",
+        "How might tobacco product health effects change in the next 15 years with emerging technologies?"
+    ]
 
     st.write("Example questions:")
-    for question in example_questions[trend_category]:
+    for question in example_questions:
         st.markdown(f"- *{question}*")
 
     prediction_question = st.text_area(
         "Enter your prediction question",
         height=100,
         key="prediction_question",
-        placeholder=f"e.g., {example_questions[trend_category][0]}"
+        placeholder=f"e.g., {example_questions[0]}"
     )
 
     # Generate prediction button
@@ -467,7 +397,23 @@ def display_healthcare_trends():
         if not prediction_question:
             st.error("Please enter a prediction question.")
         else:
-            with st.spinner(f"Analyzing {trend_category} data and generating prediction..."):
+            # Determine which category the question is most related to
+            drug_keywords = ["drug", "medication", "pharmaceutical", "prescription", "medicine", "pill", "capsule", "tablet", "adverse", "side effect"]
+            food_keywords = ["food", "dietary", "nutrition", "ingredient", "allergen", "eat", "consumption", "recall", "contamination", "pathogen"]
+            tobacco_keywords = ["tobacco", "smoking", "cigarette", "vape", "vaping", "e-cigarette", "nicotine", "cigar", "smokeless"]
+
+            # Count matches in the question
+            question_lower = prediction_question.lower()
+            drug_count = sum(1 for keyword in drug_keywords if keyword in question_lower)
+            food_count = sum(1 for keyword in food_keywords if keyword in question_lower)
+            tobacco_count = sum(1 for keyword in tobacco_keywords if keyword in question_lower)
+
+            # Determine the most relevant category
+            counts = [drug_count, food_count, tobacco_count]
+            category_index = counts.index(max(counts)) if max(counts) > 0 else 0  # Default to drugs if no matches
+            trend_category = categories[category_index]
+
+            with st.spinner(f"Analyzing FDA data and generating prediction..."):
                 # Create a container for the placeholder
                 prediction_placeholder = st.empty()
 
@@ -481,7 +427,7 @@ def display_healthcare_trends():
                         time.sleep(0.01)
                         progress_bar.progress(i)
 
-                    st.info(f"Analyzing {trend_category} data...")
+                    st.info(f"Analyzing FDA data across categories...")
                     for i in range(25, 55):
                         time.sleep(0.01)
                         progress_bar.progress(i)
@@ -491,7 +437,7 @@ def display_healthcare_trends():
                         time.sleep(0.01)
                         progress_bar.progress(i)
 
-                    st.info("Generating prediction visualization...")
+                    st.info("Generating comprehensive analysis...")
                     for i in range(85, 100):
                         time.sleep(0.01)
                         progress_bar.progress(i)
@@ -499,20 +445,12 @@ def display_healthcare_trends():
                 # Generate the prediction
                 prediction = generate_trend_prediction(trend_category, prediction_question)
 
-                # Extract data for visualization
-                prediction_data = extract_trend_data_for_visualization(prediction, trend_category)
-
                 # Clear the placeholder
                 prediction_placeholder.empty()
 
-                # Display the chart
-                st.subheader("Future Trend Prediction Chart")
-                fig = create_prediction_chart(prediction_data, trend_category, prediction_question)
-                st.plotly_chart(fig, use_container_width=True)
-
-                # Display the text prediction below the chart
-                with st.expander("View Detailed Prediction Analysis", expanded=True):
-                    st.markdown(prediction)
+                # Display the text prediction
+                st.subheader("Prediction Analysis")
+                st.markdown(prediction)
 
                 # Add a download button for the prediction
                 st.download_button(

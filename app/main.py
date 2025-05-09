@@ -13,11 +13,10 @@ from app.drug_page import display_drug_reports
 from app.tobacco_page import display_tobacco_reports
 from app.other_page import display_other_data
 from app.healthcare_trends import display_healthcare_trends
+from app.correlation_analysis import display_correlation_analysis
 from src.data_utils import clear_cache
 
 def display_home():
-    st.title("openFDA Data Analysis Dashboard")
-
     # Global Controls Section
     st.header("Global Controls")
 
@@ -78,6 +77,8 @@ def display_home():
     - **Food**: Analysis of food recalls and safety data
     - **Tobacco**: Analysis of tobacco product reports and safety data
     - **Other**: Other FDA datasets including substance and NSDE data
+    - **Healthcare Trends**: AI-powered prediction of future healthcare trends based on FDA data
+    - **Correlation Analysis**: Cross-category analysis that identifies relationships between different data domains
 
     Use the global controls above to adjust the data sampling and date range for all analyses.
     Each tab features subtabs with specialized analyses and visualizations.
@@ -180,14 +181,15 @@ def main():
     st.title("Data Analysis Dashboard")
 
     # Create tabs for different sections
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "Overview",
         "Drug Reports",
         "Device Reports",
         "Food Reports",
         "Tobacco Reports",
         "Other Data",
-        "Healthcare Trends"
+        "Healthcare Trends",
+        "Correlation Analysis"
     ])
 
     with tab1:
@@ -210,6 +212,9 @@ def main():
 
     with tab7:
         display_healthcare_trends()
+
+    with tab8:
+        display_correlation_analysis()
 
 if __name__ == "__main__":
     main()

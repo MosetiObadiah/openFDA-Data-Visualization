@@ -201,6 +201,43 @@ def format_date_range(start_date, end_date):
     end_str = end_date.strftime('%Y%m%d')
     return f"[{start_str}+TO+{end_str}]"
 
+def get_safe_limit(limit):
+    """Get a safe limit value for API calls.
+
+    This function ensures that:
+    1. The limit is converted to an integer if it's not already
+    2. The limit is capped at 1000 for single API calls to prevent excessive
+       resource usage or API rate limiting
+    3. The function returns a string, which is what the API expects
+
+    Args:
+        limit: The requested limit, can be None, a string, or a number
+
+    Returns:
+        A string representation of the limit, safely capped
+    """
+    # Default limit if none provided
+    if limit is None:
+        if "sample_size" in st.session_state:
+            # Use global sample size if available, but cap at 100 for single calls
+            limit = min(st.session_state.sample_size, 100)
+        else:
+            # Conservative default
+            limit = 100
+
+    # Ensure limit is an integer
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        # Fall back to default if conversion fails
+        limit = 100
+
+    # Cap at 100 for single API calls (pagination is handled separately)
+    limit = min(limit, 100)
+
+    # Return as string for API parameters
+    return str(limit)
+
 def clear_cache():
     """Clear the API cache"""
     cache_data.clear()

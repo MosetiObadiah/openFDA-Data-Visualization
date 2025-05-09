@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 from src.data_loader import fetch_api_data
 from src.device_events import (
     device_class_distribution,
@@ -12,8 +12,8 @@ from src.device_events import (
     get_device_events_by_age
 )
 
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Configure Gemini
+genai.configure(api_key=st.secrets.get("GEMINI_API_KEY", ""))
 
 def get_insights_from_data(df: pd.DataFrame, context: str, custom_question: str = None) -> str:
     model = genai.GenerativeModel("gemini-1.5-flash")

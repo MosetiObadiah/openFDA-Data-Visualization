@@ -17,7 +17,7 @@ logger = logging.getLogger("openfda")
 
 # API Configuration
 BASE_URL = "https://api.fda.gov/"
-API_KEY = os.getenv("OPENFDA_API_KEY", "")
+API_KEY = st.secrets.get("OPENFDA_API_KEY", "")
 
 # Cache control
 CACHE_TTL = 3600 # time to live = 1hr

@@ -1,12 +1,10 @@
 import requests
 import os
-from dotenv import load_dotenv
+import streamlit as st
 from typing import Optional
 import json
-import streamlit as st
 
-load_dotenv()
-api_key = os.getenv("OPENFDA_API_KEY")
+api_key = st.secrets.get("OPENFDA_API_KEY", "")
 print(f"API Key loaded: {'Yes' if api_key else 'No'}")
 
 BASE_URL = "https://api.fda.gov/"

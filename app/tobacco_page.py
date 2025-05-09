@@ -6,7 +6,6 @@ from datetime import datetime, date
 import google.generativeai as genai
 import os
 import sys
-from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -18,8 +17,7 @@ from src.tobacco_endpoints import (
     get_tobacco_reports_over_time
 )
 
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 else:

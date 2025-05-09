@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from datetime import datetime, date
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -24,9 +23,8 @@ from src.food_endpoints import (
     get_food_recall_trends
 )
 
-# Gemini
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Initialize Gemini API
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 else:

@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 import sys
 import time
 import concurrent.futures
@@ -25,8 +24,7 @@ from src.tobacco_endpoints import (
 if "sample_size" not in st.session_state:
     st.session_state.sample_size = 1000  # Default sample size
 
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 

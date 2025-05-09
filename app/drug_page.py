@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -20,8 +19,8 @@ from src.drug_events import (
     get_drug_therapeutic_response
 )
 
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Configure Gemini
+genai.configure(api_key=st.secrets.get("GEMINI_API_KEY", ""))
 
 def get_insights_from_data(df, context: str, custom_question: str = None) -> str:
     # Handle empty data

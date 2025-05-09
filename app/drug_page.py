@@ -409,7 +409,7 @@ def display_drug_reports():
             df_weight = get_drug_events_by_patient_weight()
 
             if df_weight.empty:
-                st.warning("No patient weight data available.")
+                st.error("No internet connection. Please check your network and try again.")
             else:
                 # Bar chart for weight distribution
                 fig_weight = px.bar(

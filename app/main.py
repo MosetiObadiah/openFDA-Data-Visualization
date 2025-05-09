@@ -166,15 +166,15 @@ def main():
 
         # Add app metadata
         st.subheader("About")
-        st.write("Created with Streamlit & OpenFDA API")
-        st.write("© 2024")
+        st.write("Created with Streamlit & OpenFDA API © 2024")
 
         # Add clear cache button to the bottom of the sidebar
         st.subheader("Troubleshooting")
+        st.caption("If you get a value error of any kind, try connecting to the internet again or use a vpn if available")
+        st.caption("If data is not loading or tables appear broken, try clearing the cache.")
         if st.button("Clear Cache", key="sidebar_clear_cache"):
             clear_cache()
             st.success("Cache cleared successfully!")
-        st.caption("If data is not loading or tables appear broken, try clearing the cache.")
 
     # Main content area
     st.title("Data Analysis Dashboard")

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from typing import Optional
 import json
+import streamlit as st
 
 load_dotenv()
 api_key = os.getenv("OPENFDA_API_KEY")
@@ -10,6 +11,7 @@ print(f"API Key loaded: {'Yes' if api_key else 'No'}")  # Debug print for API ke
 
 BASE_URL = "https://api.fda.gov/"
 
+@st.cache_data(ttl=3600)  # Cache results for 1 hour
 def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
     try:
         # Construct the full URL with base URL and parameters

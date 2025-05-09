@@ -331,6 +331,7 @@ def adverse_events_by_country(sample_size=50) -> pd.DataFrame:
     else:
         return df.head(sample_size)
 
+@st.cache_data(ttl=3600)
 def get_drug_events_by_substance():
     """Get drug events by active ingredient (substance name)."""
     endpoint = "drug/event.json"
@@ -347,6 +348,7 @@ def get_drug_events_by_substance():
     df.columns = ["Substance", "Count"]
     return df
 
+@st.cache_data(ttl=3600)
 def get_drug_events_by_action():
     """Get drug events by action taken with the drug."""
     endpoint = "drug/event.json"
@@ -425,6 +427,7 @@ def get_drug_events_by_patient_sex(start_date=None, end_date=None) -> pd.DataFra
 
     return df
 
+@st.cache_data(ttl=3600)
 def get_drug_events_by_patient_weight():
     """Get drug events by patient weight."""
     endpoint = "drug/event.json"
@@ -435,7 +438,8 @@ def get_drug_events_by_patient_weight():
     data = fetch_api_data(endpoint, params)
 
     if not data or "results" not in data:
-        return pd.DataFrame()
+        # Return an empty DataFrame with the correct columns to avoid axis length mismatch error
+        return pd.DataFrame(columns=["Weight", "Count", "Weight Group"])
 
     df = pd.DataFrame(data["results"])
     df.columns = ["Weight", "Count"]
@@ -452,6 +456,7 @@ def get_drug_events_by_patient_weight():
     weight_groups = df.groupby("Weight Group")["Count"].sum().reset_index()
     return weight_groups
 
+@st.cache_data(ttl=3600)
 def get_drug_events_by_reaction_outcome():
     """Get drug events by reaction outcome."""
     endpoint = "drug/event.json"
@@ -479,6 +484,7 @@ def get_drug_events_by_reaction_outcome():
     df["Outcome"] = df["Outcome Code"].map(outcome_map)
     return df[["Outcome", "Count"]]
 
+@st.cache_data(ttl=3600)
 def get_drug_events_by_reporter_qualification():
     """Get drug events by reporter qualification."""
     endpoint = "drug/event.json"

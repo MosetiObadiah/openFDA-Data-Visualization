@@ -79,5 +79,5 @@ This dashboard application provides interactive visualizations and AI-powered in
 - **Predictive Analytics**: Ask questions about future trends based on FDA data patterns
 - **Multi-domain Analysis**: Explore drug, food, tobacco, and device safety data
 
-### Screenshot
+### DashBoard Screenshot
 ![Dashboard Screenshot](/images/Screenshot%20From%202025-05-09%2013-48-33.png)
